@@ -217,6 +217,10 @@ def handle_message(data):
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats}, broadcast=True)
 
+    # まずユーザーのプロンプトを履歴に追加して保存（UIには既に表示済み）
+    messages.append({'role': 'user', 'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')})
+    save_chat_messages(user_dir, chat_id, messages)
+
     try:
         if file_data_base64:
             file_data = base64.b64decode(file_data_base64)
@@ -265,12 +269,9 @@ def handle_message(data):
             full_response += formatted_metadata
             emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
 
-        messages.append({'role': 'user', 'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')})
         messages.append({'role': 'ai', 'content': full_response})
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, chat._curated_history)
-
-        # --- 応答完了を示すイベントを送信 ---
         emit('gemini_response_complete', {'chat_id': chat_id})
 
     except Exception as e:

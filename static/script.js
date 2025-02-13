@@ -353,8 +353,15 @@ function displayOutgoingMessage(message) {
       <img class="message__avatar" src="${PROFILE_IMG_URL}" alt="User avatar">
       <p class="message__text"></p>
     </div>
+    <button class="message__delete-button" onclick="deleteChatMessage(${chatsContainer.children.length})">
+      <i class='bx bx-trash'></i>
+    </button>
+    <span onClick="copyMessageToClipboard(this)" class="message__icon hide">
+      <i class='bx bx-copy-alt'></i>
+    </span>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');
+  // innerText を使用することで、HTMLタグはエスケープされて表示される
   messageElement.querySelector('.message__text').innerText = message;
   chatsContainer.appendChild(messageElement);
   scrollToBottom();
@@ -404,13 +411,32 @@ socket.on('gemini_response_chunk', (data) => {
 
 socket.on('gemini_response_error', (data) => {
   if (chat_id !== data.chat_id) return;
-  const error = data.error;
-  const messageElement = displayIncomingMessage('', chatsContainer.children.length);
-  messageElement.innerText = `エラーが発生しました: ${error}`;
-  messageElement.closest('.message').classList.add('message--error');
+  // 既存のローディング・受信中の要素があれば削除する
+  const loadingElement = document.querySelector('.message--loading');
+  if (loadingElement) {
+    loadingElement.remove();
+  }
   removeLoadingIndicator();
   isGeneratingResponse = false;
+  setPromptEnabled(true);  // 入力欄を再有効化
+  displayErrorMessage(data.error);
 });
+
+function displayErrorMessage(error) {
+  // エラー用のHTMLを作成（アイコンは1つのみ）
+  const errorHtml = `
+    <div class="message__content message--error">
+      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
+      <p class="message__text">エラーが発生しました: ${error}</p>
+    </div>
+    <button class="message__delete-button error-delete" onclick="deleteErrorMessage(this)">
+      <i class='bx bx-trash'></i>
+    </button>
+  `;
+  const errorElement = createChatMessageElement(errorHtml, 'ai', 'message--error');
+  chatsContainer.appendChild(errorElement);
+  scrollToBottom();
+}
 
 socket.on('gemini_response_complete', (data) => {
   if (chat_id !== data.chat_id) return;
@@ -420,6 +446,10 @@ socket.on('gemini_response_complete', (data) => {
   isGeneratingResponse = false;
   setPromptEnabled(true);
 });
+
+function deleteErrorMessage(button) {
+  loadChat(chat_id);
+}
 
 // ----------------------------------------
 // Loading indicator
@@ -455,6 +485,7 @@ function removeLoadingIndicator() {
 // ----------------------------------------
 // UIヘルパー関数
 // ----------------------------------------
+
 const createChatMessageElement = (htmlContent, role, ...cssClasses) => {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', ...cssClasses);
@@ -511,6 +542,8 @@ const throttle = (callback, limit) => {
     }
   };
 };
+
+
 
 // ----------------------------------------
 // グラウンディング

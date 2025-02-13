@@ -23,6 +23,11 @@ body{
     /* display: flex;  body の flex レイアウトを削除 */
 }
 
+textarea {
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
 .app-container {
     display: flex; /* アプリケーション全体を flex レイアウトにする */
 }
@@ -110,6 +115,11 @@ body{
     padding: 20px;
     height: 100vh; /* 画面の高さいっぱいにする */
     overflow-y: auto; /* 必要に応じてスクロール */
+}
+
+.left-sidebar, .right-sidebar {
+    width: 250px;
+    flex-shrink: 0;
 }
 
 .left-sidebar {
@@ -260,6 +270,7 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column; /* chats と prompt を縦に並べる */
     align-items: center; /* 水平方向中央揃え */
+    margin-bottom: 60px; /* プロンプトの高さ分下部に余白を作る */
 }
 
 
@@ -278,37 +289,34 @@ body.hide-header .header{
 
 /* ... (navbar, prompt, chats, メッセージ関連のスタイルは変更なし) ... */
 
-.prompt{
+.prompt {
+    position: fixed;
+    bottom: 0;
+    left: 250px;   /* 左サイドバーの幅と同じ */
+    right: 250px;  /* 右サイドバーの幅と同じ */
     background: var(--primary-color);
     z-index: 1000;
-    width: 100%; /* 親要素に合わせて幅を調整 */
-    left: auto; /* left: 0 を削除または auto に変更 */
-    bottom: 0;
     padding: 1rem;
 }
 
 .prompt__input-wrapper{
     width: 100%;
-    height: 4rem;
+    height: 12rem;
     display: flex;
     position: relative;
+    color: var(--text-color);
+    padding: 1rem 1rem;
+    border-radius: 30px;
+    background: var(--secondary-color);
 }
 
 .prompt__form-input{
-    height: 100%;
+    font-size: 1rem;
+    height: 80%;
     width: 100%;
     border: none;
     resize: none;
-    font-size: 1rem;
-    color: var(--text-color);
-    padding: 1rem 1.75rem;
-    border-radius: 100px;
     background: var(--secondary-color);
-    transition: background 0.3s ease;
-}
-
-.prompt__form-input:focus{
-    background: var(--focus-color);
 }
 
 .prompt__form-input:focus ~ .prompt__form-button:hover{
@@ -322,7 +330,7 @@ body.hide-header .header{
 .prompt__form-button{
     position: absolute;
     right: 0.5rem;
-    top: 50%;
+    top: 90%;
     transform: translateY(-50%);
     border: none;
     width: 48px;
