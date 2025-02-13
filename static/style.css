@@ -279,7 +279,7 @@ input:checked + .slider:before {
 .chats .message .message__content,
 .prompt__form{
     margin: 0 auto;
-    max-width: 824px;
+    max-width: 1000px;
     width: 100%; /* 親要素に合わせて幅を調整 */
 }
 
@@ -555,8 +555,8 @@ pre{
 
 code{
     margin-top: 30px;
-    border-radius: 5px;
-    color: inherit;
+    border-radius: 2px;
+		background-color: var(--secondary-color);
 }
 
 .code__language-label{
@@ -570,7 +570,7 @@ code{
 }
 
 .hljs{
-    background-color: var(--secondary-color);
+    background-color: #000000;
 }
 
 blockquote{
