@@ -34,6 +34,11 @@ let fileData = null;
 let fileName = null;
 let fileMimeType = null;
 
+const md = window.markdownit({
+  html: false, // htmlタグを有効にする
+  breaks: true, // md内の改行を<br>に変換
+});
+
 // ----------------------------------------
 // 認証 (ログイン/登録)
 // ----------------------------------------
@@ -226,6 +231,9 @@ function displayHistoryList(history) {
     
     historyItem.appendChild(titleSpan);
     historyItem.appendChild(deleteBtn);
+    if (chatId === chat_id) {
+      historyItem.classList.add('active');
+    }
     chatHistoryList.appendChild(historyItem);
   });
 }
@@ -253,8 +261,9 @@ function startNewChat() {
 }
 
 socket.on('chat_created', (data) => {
-  chat_id = data.chat_id;
-  fetchHistoryList();
+  chat_id = data.chat_id; // 新規チャットのIDを保存
+  fetchHistoryList();      // 履歴一覧を再読み込み
+  loadChat(chat_id);       // 新規チャットを自動で読み込む
 });
 
 function loadChat(selectedChatId) {
@@ -271,6 +280,9 @@ socket.on('chat_loaded', (data) => {
   chatsContainer.innerHTML = '';
   chat_id = data.chat_id;
   displayMessages(data.messages);
+  // チャット全体再描画後にコードブロックを処理する
+  hljs.highlightAll();
+  addCopyButtonToCodeBlocks();
 });
 
 function displayMessages(messages) {
@@ -285,7 +297,7 @@ function displayMessages(messages) {
        <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>`,
       message.role, message.role === 'user' ? 'message--outgoing' : 'message--incoming'
     );
-    messageElement.querySelector('.message__text').innerHTML = marked.parse(message.content);
+    messageElement.querySelector('.message__text').innerHTML = md.render(message.content);
     chatsContainer.appendChild(messageElement);
   });
   scrollToBottom();
@@ -400,7 +412,7 @@ socket.on('gemini_response_chunk', (data) => {
   messageElement.dataset.chunkBuffer = chunkBuffer;
   // throttle の返り値を即時呼び出す
   const throttledUpdate = throttle(() => {
-    messageElement.innerHTML = marked.parse(chunkBuffer);
+    messageElement.innerHTML = md.render(chunkBuffer);
     hljs.highlightAll();
     addCopyButtonToCodeBlocks();
   }, 100);

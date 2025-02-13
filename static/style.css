@@ -18,6 +18,7 @@
     --placeholder-color: #717075;
 }
 
+
 body{
     background: var(--primary-color);
     /* display: flex;  body の flex レイアウトを削除 */
@@ -270,7 +271,6 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column; /* chats と prompt を縦に並べる */
     align-items: center; /* 水平方向中央揃え */
-    margin-bottom: 60px; /* プロンプトの高さ分下部に余白を作る */
 }
 
 
@@ -292,8 +292,8 @@ body.hide-header .header{
 .prompt {
     position: fixed;
     bottom: 0;
-    left: 250px;   /* 左サイドバーの幅と同じ */
-    right: 250px;  /* 右サイドバーの幅と同じ */
+    left: 300px;   /* 左サイドバーの幅と同じ */
+    right: 300px;  /* 右サイドバーの幅と同じ */
     background: var(--primary-color);
     z-index: 1000;
     padding: 1rem;
@@ -372,7 +372,7 @@ body.hide-header .header{
 .chats{
     padding: 2rem 1rem; /* padding-bottom を削除 */
     padding-bottom: 100px; /* prompt の高さに合わせて padding-bottom を調整 */
-    max-height: calc(100vh - 150px); /* サイドバーと prompt を考慮した高さ */
+    max-height: calc(100vh - 200px); /* サイドバーと prompt を考慮した高さ */
     overflow-y: auto;
     scrollbar-color: #999 transparent;
     width: 100%; /* 親要素に合わせて幅を調整 */
@@ -398,7 +398,7 @@ body.hide-header .header{
 
 .chats .message__text{
     color: var(--text-color);
-    white-space: pre-wrap;
+    white-space: normal;
     margin-top: 10px;
 }
 
@@ -514,7 +514,6 @@ p{
 }
 
 ul{
-    list-style: disc inside;
     margin-left: 20px;
 }
 

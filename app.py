@@ -259,9 +259,10 @@ def handle_message(data):
                         if hasattr(metadata, 'web_search_queries') and metadata.web_search_queries:
                             for query in metadata.web_search_queries:
                                 all_grounding_queries += f'{query} / '
+            formatted_metadata = ''
             if all_grounding_queries:
                 all_grounding_queries = ' / '.join(sorted(set(all_grounding_queries.rstrip(' /').split(' / '))))
-            formatted_metadata = '\n\n---\n'
+                formatted_metadata = '\n\n---\n'
             if all_grounding_links:
                 formatted_metadata += all_grounding_links + '\n'
             if all_grounding_queries:
