@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>Gemini</title>
+  <script>
+    // FlaskのJinja2で設定した静的ファイルのURLをグローバル変数に代入
+    const PROFILE_IMG_URL = "{{ url_for('static', filename='assets/profile.png') }}";
+    const GEMINI_IMG_URL = "{{ url_for('static', filename='assets/gemini.svg') }}";
+  </script>
+</head>
+<body>
+		<div id="loginContainer"></div>
+    <div class="app-container" id="appContainer" style="display: none;">
+        <div class="sidebar left-sidebar" id="leftSidebar">
+            <h3>履歴</h3>
+            <button id="newChatButton">新規チャット</button>
+            <div class="chat-history" id="chatHistoryList">
+                <!-- チャット履歴リスト -->
+            </div>
+        </div>
+
+        <main class="main-content" id="mainContent">
+            <section class="chats" id="chats"></section>
+
+            <section class="prompt">
+                <form action="#" class="prompt__form" novalidate>
+                    <div class="prompt__input-wrapper">
+                        <input type="text" placeholder="Enter a prompt here" class="prompt__form-input" required id="promptInput" autocomplete="off">
+                        <button class="prompt__form-button" id="sendButton">
+                            <i class='bx bx-send'></i>
+                        </button>
+                        <input type="file" id="fileInput" class="prompt__form-file" style="display: none;">
+                        <button class="prompt__form-button" id="attachButton" type="button">
+                            <i class='bx bx-paperclip'></i>
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+
+				<div class="sidebar right-sidebar" id="rightSidebar">
+					<h3>設定</h3>
+					<div class="model-selector">
+						<label for="modelSelect">モデル選択:</label>
+						<select id="modelSelect">
+							<!-- モデルリスト -->
+						</select>
+					</div>
+					<div class="grounding-switch">
+						<label>グラウンディング:</label>
+						<label class="switch">
+							<input type="checkbox" id="groundingSwitch">
+							<span class="slider round"></span>
+						</label>
+					</div>
+					<!-- 添付ファイル表示エリア -->
+					<div id="attachmentPreview" style="margin-top: 1rem;">
+						<!-- 添付ファイルがあればここに表示 -->
+					</div>
+				</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

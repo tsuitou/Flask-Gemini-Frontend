@@ -1,0 +1,593 @@
+const socket = io();
+
+// UI要素の取得（省略せずそのまま）
+const loginWrapper = document.getElementById('loginWrapper');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const loginButton = document.getElementById('loginButton');
+const registerButton = document.getElementById('registerButton');
+const authError = document.getElementById('authError');
+const authSuccess = document.getElementById('authSuccess');
+
+const appContainer = document.getElementById('appContainer');
+const leftSidebar = document.getElementById('leftSidebar');
+const mainContent = document.getElementById('mainContent');
+const rightSidebar = document.getElementById('rightSidebar');
+const chatHistoryList = document.getElementById('chatHistoryList');
+const newChatButton = document.getElementById('newChatButton');
+const chatsContainer = document.getElementById('chats');
+const promptForm = document.querySelector('.prompt__form');
+const promptInput = document.getElementById('promptInput');
+const sendButton = document.getElementById('sendButton');
+const fileInput = document.getElementById('fileInput');
+const attachButton = document.getElementById('attachButton');
+const modelSelect = document.getElementById('modelSelect');
+const groundingSwitch = document.getElementById('groundingSwitch');
+
+// State variables
+let username = null;
+let chat_id = null;
+let currentModel = null;
+let groundingEnabled = false;
+let isGeneratingResponse = false;
+let fileData = null;
+let fileName = null;
+let fileMimeType = null;
+
+// ----------------------------------------
+// 認証 (ログイン/登録)
+// ----------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const storedUsername = localStorage.getItem('username');
+  const loginContainer = document.getElementById('loginContainer');
+  const appContainer = document.getElementById('appContainer');
+
+  if (storedUsername) {
+    // ログイン状態の場合：ログインフォームを削除してアプリを表示
+    loginContainer.innerHTML = '';  // または loginContainer.remove();
+    appContainer.style.display = 'flex';
+    initializeApp(); // アプリ初期化処理
+  } else {
+    // ログイン状態でない場合：ログインフォームを動的に生成して表示
+    loginContainer.innerHTML = `
+    <div class="login-wrapper" id="loginWrapper">
+        <div class="login-form">
+            <h2>ログイン / 新規登録</h2>
+            <div class="form-group">
+                <label for="username">ユーザー名:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">パスワード:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-buttons">
+                <button id="loginButton">ログイン</button>
+                <button id="registerButton">新規登録</button>
+            </div>
+            <div id="authError" class="error-message"></div>
+            <div id="authSuccess" class="success-message"></div>
+        </div>
+    </div>
+    `;
+    appContainer.style.display = 'none';
+    // ログイン用のイベントハンドラを設定
+    setupLoginHandlers();
+  }
+});
+
+// ログイン用のイベントハンドラ設定例
+function setupLoginHandlers() {
+  const loginButton = document.getElementById('loginButton');
+  const registerButton = document.getElementById('registerButton');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const authError = document.getElementById('authError');
+  const authSuccess = document.getElementById('authSuccess');
+
+  loginButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    const uname = usernameInput.value;
+    const pwd = passwordInput.value;
+    socket.emit('login', { username: uname, password: pwd });
+  });
+
+  registerButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    const uname = usernameInput.value;
+    const pwd = passwordInput.value;
+    socket.emit('register', { username: uname, password: pwd });
+  });
+}
+
+// SocketIO でログインレスポンスを受け取った後の処理
+socket.on('login_response', (response) => {
+  // ログインフォームが存在する場合のみ取得
+  const authSuccess = document.getElementById('authSuccess');
+  const authError = document.getElementById('authError');
+  
+  if (response.status === 'success') {
+    if (authSuccess) authSuccess.textContent = 'ログイン成功';
+    if (authError) authError.textContent = '';
+    // ログイン状態を保持
+    localStorage.setItem('username', response.username);
+    const loginContainer = document.getElementById('loginContainer');
+    if (loginContainer) loginContainer.innerHTML = '';
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) appContainer.style.display = 'flex';
+    initializeApp(); // アプリ初期化処理
+  } else {
+    if (authError) authError.textContent = response.message;
+    if (authSuccess) authSuccess.textContent = '';
+  }
+});
+
+socket.on('register_response', (response) => {
+  // ログインフォームのエラーメッセージ要素が存在するか確認
+  const authSuccess = document.getElementById('authSuccess');
+  const authError = document.getElementById('authError');
+  
+  if (response.status === 'success') {
+    if (authSuccess) authSuccess.textContent = '登録成功。ログインしてください。';
+    if (authError) authError.textContent = '';
+  } else {
+    if (authError) authError.textContent = response.message;
+    if (authSuccess) authSuccess.textContent = '';
+  }
+});
+
+// 例：アプリ初期化処理
+function initializeApp() {
+  // localStorageからusernameを取得してグローバル変数にセット
+  username = localStorage.getItem('username');
+  // サーバー側に username を送信（接続直後にセットするなど）
+  socket.emit('set_username', { username: username });
+  
+  // その後、各種初期化処理を実行
+  fetchModelList();
+  fetchHistoryList();
+  startNewChat();
+}
+
+// ----------------------------------------
+// モデル選択
+// ----------------------------------------
+function fetchModelList() {
+  socket.emit('get_model_list');
+}
+
+socket.on('model_list', (data) => {
+  modelSelect.innerHTML = '';
+  data.models.forEach(modelName => {
+    const option = document.createElement('option');
+    option.value = modelName;
+    option.textContent = modelName.split('/').pop();
+    modelSelect.appendChild(option);
+  });
+  if (data.models.length > 0) {
+    currentModel = data.models[0];
+    modelSelect.value = currentModel;
+  }
+  modelSelect.addEventListener('change', (event) => {
+    currentModel = event.target.value;
+  });
+});
+
+// ----------------------------------------
+// チャット履歴と新規チャット
+// ----------------------------------------
+function fetchHistoryList() {
+  if (!username) return;
+  socket.emit('get_history_list', { username: username });
+}
+
+function displayHistoryList(history) {
+  chatHistoryList.innerHTML = '';
+
+  // 「New Chat」項目は削除し、HTML側で新規チャットボタンを先頭に配置するため、
+  // ここでは history の項目のみを表示する
+
+  // historyItems を chat_id の降順（タイムスタンプの場合）で表示
+  const historyItems = Object.entries(history);
+  historyItems.sort((a, b) => Number(b[0]) - Number(a[0])); // 数値変換（chat_id がタイムスタンプの場合）
+  historyItems.forEach(([chatId, chatTitle]) => {
+    const historyItem = document.createElement('div');
+    historyItem.classList.add('chat-history-item');
+    
+    // タイトル部分（クリックでチャット読み込み）
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = chatTitle;
+    titleSpan.style.cursor = 'pointer';
+    titleSpan.addEventListener('click', () => {
+      loadChat(chatId);
+      document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
+      historyItem.classList.add('active');
+    });
+    
+    // 削除ボタン
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '×';
+    deleteBtn.classList.add('chat-history-delete-btn');
+		deleteBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (confirm('このチャット履歴を削除しますか？')) {
+				socket.emit('delete_chat', { username: username, chat_id: chatId });
+			}
+		});
+
+		// サーバー側から削除完了イベントを受信したら履歴再読み込み
+		socket.on('chat_deleted', (data) => {
+			// 必要に応じて現在表示中のチャットをクリア
+			if (chat_id === data.chat_id) {
+				startNewChat();
+			}
+			fetchHistoryList();
+		});
+    
+    historyItem.appendChild(titleSpan);
+    historyItem.appendChild(deleteBtn);
+    chatHistoryList.appendChild(historyItem);
+  });
+}
+
+
+// サーバー側からの最新履歴受信時にも自動で再描画
+socket.on('history_list', (data) => {
+  displayHistoryList(data.history);
+});
+
+newChatButton.addEventListener('click', () => {
+  startNewChat();
+  document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
+});
+
+function startNewChat() {
+  if (!username) return;
+  socket.emit('new_chat', { username: username });
+  chatsContainer.innerHTML = '';
+  chat_id = null;
+  promptInput.value = '';
+  fileData = null;
+  fileName = null;
+  fileMimeType = null;
+}
+
+socket.on('chat_created', (data) => {
+  chat_id = data.chat_id;
+  fetchHistoryList();
+});
+
+function loadChat(selectedChatId) {
+  if (!username) return;
+  chat_id = selectedChatId;
+  socket.emit('load_chat', { username: username, chat_id: selectedChatId });
+  chatsContainer.innerHTML = '';
+  fileData = null;
+  fileName = null;
+  fileMimeType = null;
+}
+
+socket.on('chat_loaded', (data) => {
+  chatsContainer.innerHTML = '';
+  chat_id = data.chat_id;
+  displayMessages(data.messages);
+});
+
+function displayMessages(messages) {
+  chatsContainer.innerHTML = '';
+  messages.forEach((message, index) => {
+    const messageElement = createChatMessageElement(
+      `<div class="message__content">
+         <img class="message__avatar" src="${ message.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL }" alt="${message.role} avatar">
+         <p class="message__text"></p>
+       </div>
+       <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
+       <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>`,
+      message.role, message.role === 'user' ? 'message--outgoing' : 'message--incoming'
+    );
+    messageElement.querySelector('.message__text').innerHTML = marked.parse(message.content);
+    chatsContainer.appendChild(messageElement);
+  });
+  scrollToBottom();
+}
+
+function deleteChatMessage(index) {
+  if (!username || !chat_id) return;
+  socket.emit('delete_message', { username: username, chat_id: chat_id, message_index: index });
+}
+
+socket.on('message_deleted', (data) => {
+  if (chat_id === data.chat_id) {
+    loadChat(chat_id);
+    fetchHistoryList();
+  }
+});
+
+// ----------------------------------------
+// メッセージ送受信
+// ----------------------------------------
+function setPromptEnabled(enabled) {
+  promptInput.disabled = !enabled;
+  sendButton.disabled = !enabled;
+  // 送信ボタンのスタイルも変更するなどの工夫があれば追加
+}
+
+promptForm.addEventListener('submit', handleSendMessage);
+
+function handleSendMessage(e) {
+  e.preventDefault();
+  if (isGeneratingResponse) return; // 既に応答中なら送信しない
+  const message = promptInput.value.trim();
+  if (!message && !fileData) return;
+  
+  // 応答中フラグをセットして入力欄を無効化
+  isGeneratingResponse = true;
+  setPromptEnabled(false);
+
+  const userMessage = message + (fileName ? `\n\n[添付ファイル: ${fileName}]` : '');
+  displayOutgoingMessage(userMessage);
+  promptInput.value = '';
+
+  const messageData = {
+    username: username,
+    chat_id: chat_id,
+    model_name: currentModel,
+    message: message,
+    grounding_enabled: groundingEnabled,
+    file_data: fileData,
+    file_name: fileName,
+    file_mime_type: fileMimeType,
+  };
+
+  socket.emit('send_message', messageData);
+  displayLoadingIndicator();
+  fileData = null;
+  fileName = null;
+  fileMimeType = null;
+  fileInput.value = '';
+}
+
+function displayOutgoingMessage(message) {
+  const messageHtml = `
+    <div class="message__content">
+      <img class="message__avatar" src="${PROFILE_IMG_URL}" alt="User avatar">
+      <p class="message__text"></p>
+    </div>
+  `;
+  const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');
+  messageElement.querySelector('.message__text').innerText = message;
+  chatsContainer.appendChild(messageElement);
+  scrollToBottom();
+}
+
+function displayIncomingMessage(message, index) {
+  const messageHtml = `
+    <div class="message__content">
+      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
+      <p class="message__text"></p>
+      <div class="message__loading-indicator hide">
+        <div class="message__loading-bar"></div>
+        <div class="message__loading-bar"></div>
+        <div class="message__loading-bar"></div>
+      </div>
+    </div>
+    <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
+    <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>
+  `;
+  const messageElement = createChatMessageElement(messageHtml, 'ai', 'message--incoming');
+  chatsContainer.appendChild(messageElement);
+  scrollToBottom();
+  return messageElement.querySelector('.message__text');
+}
+
+socket.on('gemini_response_chunk', (data) => {
+  if (chat_id !== data.chat_id) return;
+  const chunk = data.chunk;
+  let messageElement = document.querySelector('.message--incoming:last-child .message__text');
+  if (!messageElement) {
+    const index = chatsContainer.children.length;
+    messageElement = displayIncomingMessage('', index);
+  }
+  let chunkBuffer = messageElement.dataset.chunkBuffer || '';
+  chunkBuffer += chunk;
+  messageElement.dataset.chunkBuffer = chunkBuffer;
+  // throttle の返り値を即時呼び出す
+  const throttledUpdate = throttle(() => {
+    messageElement.innerHTML = marked.parse(chunkBuffer);
+    hljs.highlightAll();
+    addCopyButtonToCodeBlocks();
+  }, 100);
+  throttledUpdate();
+  removeLoadingIndicator();
+  isGeneratingResponse = false;
+});
+
+socket.on('gemini_response_error', (data) => {
+  if (chat_id !== data.chat_id) return;
+  const error = data.error;
+  const messageElement = displayIncomingMessage('', chatsContainer.children.length);
+  messageElement.innerText = `エラーが発生しました: ${error}`;
+  messageElement.closest('.message').classList.add('message--error');
+  removeLoadingIndicator();
+  isGeneratingResponse = false;
+});
+
+socket.on('gemini_response_complete', (data) => {
+  if (chat_id !== data.chat_id) return;
+  // 応答完了時に最新のチャット履歴を再描画する
+  loadChat(chat_id);
+  // 応答完了後にプロンプト入力欄を再有効化
+  isGeneratingResponse = false;
+  setPromptEnabled(true);
+});
+
+// ----------------------------------------
+// Loading indicator
+// ----------------------------------------
+function displayLoadingIndicator() {
+  const loadingHtml = `
+    <div class="message__content">
+      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
+      <p class="message__text"></p>
+      <div class="message__loading-indicator">
+        <div class="message__loading-bar"></div>
+        <div class="message__loading-bar"></div>
+        <div class="message__loading-bar"></div>
+      </div>
+    </div>
+  `;
+  const loadingMessageElement = createChatMessageElement(loadingHtml, 'ai', 'message--incoming', 'message--loading');
+  chatsContainer.appendChild(loadingMessageElement);
+  scrollToBottom();
+}
+
+function removeLoadingIndicator() {
+  const loadingElement = document.querySelector('.message--loading');
+  if (loadingElement) {
+    loadingElement.classList.remove('message--loading');
+    const loadingIndicator = loadingElement.querySelector('.message__loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.classList.add('hide');
+    }
+  }
+}
+
+// ----------------------------------------
+// UIヘルパー関数
+// ----------------------------------------
+const createChatMessageElement = (htmlContent, role, ...cssClasses) => {
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('message', ...cssClasses);
+  messageElement.classList.add(`message--${role}`);
+  messageElement.innerHTML = htmlContent;
+  return messageElement;
+};
+
+const scrollToBottom = () => {
+  chatsContainer.scrollTop = chatsContainer.scrollHeight;
+};
+
+const copyMessageToClipboard = (copyButton) => {
+  const messageContent = copyButton.parentElement.querySelector('.message__text').innerText;
+  navigator.clipboard.writeText(messageContent);
+  copyButton.innerHTML = `<i class='bx bx-check'></i>`;
+  setTimeout(() => (copyButton.innerHTML = `<i class='bx bx-copy-alt'></i>`), 1000);
+};
+
+const addCopyButtonToCodeBlocks = () => {
+  const codeBlocks = document.querySelectorAll('pre');
+  codeBlocks.forEach((block) => {
+    if (block.querySelector('.code__copy-btn')) return;
+    const codeElement = block.querySelector('code');
+    if (!codeElement) return;
+    let language = [...codeElement.classList].find((cls) => cls.startsWith('language-'))?.replace('language-', '') || 'Text';
+    const languageLabel = document.createElement('div');
+    languageLabel.innerText = language.charAt(0).toUpperCase() + language.slice(1);
+    languageLabel.classList.add('code__language-label');
+    block.appendChild(languageLabel);
+    const copyButton = document.createElement('button');
+    copyButton.innerHTML = `<i class='bx bx-copy'></i>`;
+    copyButton.classList.add('code__copy-btn');
+    block.appendChild(copyButton);
+    copyButton.addEventListener('click', () => {
+      navigator.clipboard.writeText(codeElement.innerText).then(() => {
+        copyButton.innerHTML = `<i class='bx bx-check'></i>`;
+        setTimeout(() => (copyButton.innerHTML = `<i class='bx bx-copy'></i>`), 2000);
+      }).catch((err) => {
+        console.error('Copy failed:', err);
+        alert('Unable to copy text!');
+      });
+    });
+  });
+};
+
+const throttle = (callback, limit) => {
+  let waiting = false;
+  return function() {
+    if (!waiting) {
+      callback.apply(this, arguments);
+      waiting = true;
+      setTimeout(() => { waiting = false; }, limit);
+    }
+  };
+};
+
+// ----------------------------------------
+// グラウンディング
+// ----------------------------------------
+groundingSwitch.addEventListener('change', () => {
+  groundingEnabled = groundingSwitch.checked;
+  socket.emit('set_grounding', { grounding_enabled: groundingEnabled });
+});
+
+socket.on('grounding_updated', (data) => {
+  groundingEnabled = data.grounding_enabled;
+  groundingSwitch.checked = groundingEnabled;
+});
+
+// ----------------------------------------
+// ファイル添付
+// ----------------------------------------
+attachButton.addEventListener('click', () => {
+  fileInput.click();
+});
+
+
+const attachmentPreview = document.getElementById('attachmentPreview');
+
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) {
+        // 20MB = 20 * 1024 * 1024 バイト
+        if (file.size > 20 * 1024 * 1024) {
+            alert("添付ファイルの容量は20MBを超えることはできません。");
+            fileData = null;
+            fileName = null;
+            fileMimeType = null;
+            fileInput.value = ""; // ファイル入力欄をリセット
+            attachmentPreview.innerHTML = ""; // 添付プレビューもクリア
+            return;
+        }
+
+        fileName = file.name;
+        fileMimeType = file.type || 'application/octet-stream';
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            // Base64部分を取得
+            fileData = event.target.result.split(',')[1];
+            let previewHTML = '';
+            if (fileMimeType.startsWith('image/')) {
+                previewHTML = `
+                  <div class="attachment-item">
+                    <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
+                    <button class="attachment-delete-btn">×</button>
+                  </div>
+                `;
+            } else {
+                previewHTML = `
+                  <div class="attachment-item">
+                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                    <button class="attachment-delete-btn">×</button>
+                  </div>
+                `;
+            }
+            attachmentPreview.innerHTML = previewHTML;
+            // 削除ボタンのイベント追加
+            const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                fileData = null;
+                fileName = null;
+                fileMimeType = null;
+                attachmentPreview.innerHTML = "";
+                fileInput.value = "";
+            });
+        };
+        reader.readAsDataURL(file);
+    } else {
+        fileData = null;
+        fileName = null;
+        fileMimeType = null;
+        attachmentPreview.innerHTML = "";
+    }
+});
+

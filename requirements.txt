@@ -1,0 +1,7 @@
+bcrypt
+Flask
+Flask-SocketIO
+google-genai
+joblib
+pathlib
+python-dotenv
