@@ -271,6 +271,13 @@ socket.on('chat_created', (data) => {
 
 function loadChat(selectedChatId) {
   if (!username) return;
+  // もし現在応答中ならキャンセルイベントを送信して応答処理を中断する
+	console.log(isGeneratingResponse);
+  if (isGeneratingResponse) {
+    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
+    isGeneratingResponse = false; // クライアント側のフラグもリセット
+		setPromptEnabled(true);
+  }
   chat_id = selectedChatId;
   socket.emit('load_chat', { username: username, chat_id: selectedChatId });
   chatsContainer.innerHTML = '';
@@ -421,7 +428,6 @@ socket.on('gemini_response_chunk', (data) => {
   }, 100);
   throttledUpdate();
   removeLoadingIndicator();
-  isGeneratingResponse = false;
 });
 
 socket.on('gemini_response_error', (data) => {

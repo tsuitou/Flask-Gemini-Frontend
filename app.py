@@ -13,6 +13,8 @@ from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 from dotenv import load_dotenv
 from pathlib import Path
 
+cancellation_flags = {}
+
 app = Flask(__name__)
 # 必要に応じて cors_allowed_origins を設定
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -193,8 +195,20 @@ def handle_get_model_list():
     combined_models = sorted(set(api_model_names + [m.strip() for m in MODELS if m.strip()]))
     emit('model_list', {'models': combined_models})
 
+@socketio.on('cancel_stream')
+def handle_cancel_stream(data):
+    sid = request.sid
+    cancellation_flags[sid] = True
+    print(f"Cancellation requested for sid {sid} on chat {data.get('chat_id')}")
+
 @socketio.on('send_message')
 def handle_message(data):
+    # 現在のクライアントのセッションIDを取得し、キャンセルフラグをリセット
+    sid = request.sid
+    cancellation_flags[sid] = False
+    print(cancellation_flags)
+    print(sid)
+
     username = data.get('username')
     chat_id = data.get('chat_id')
     model_name = data.get('model_name')
@@ -212,16 +226,20 @@ def handle_message(data):
     # 新規チャットの場合、past_chats にタイトルを登録
     past_chats = load_past_chats(user_dir)
     if chat_id not in past_chats:
-        chat_title = message[:20]
+        chat_title = message[:25]
         past_chats[chat_id] = chat_title
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats}, broadcast=True)
 
-    # まずユーザーのプロンプトを履歴に追加して保存（UIには既に表示済み）
-    messages.append({'role': 'user', 'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')})
+    # ユーザーのプロンプトを履歴に追加して保存（UIには既に表示済み）
+    messages.append({
+        'role': 'user',
+        'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')
+    })
     save_chat_messages(user_dir, chat_id, messages)
 
     try:
+        # 添付ファイルがある場合の処理
         if file_data_base64:
             file_data = base64.b64decode(file_data_base64)
             file_part = types.Part.from_bytes(data=file_data, mime_type=file_mime_type)
@@ -236,15 +254,24 @@ def handle_message(data):
                 response_modalities=["TEXT"]
             )
 
+        # ストリーミング応答の開始
         response = chat.send_message_stream(message=contents, config=configs)
         full_response = ""
         response_chunks = []
+
         for chunk in response:
+            # クライアントからキャンセル要求が来ている場合は中断
+            if cancellation_flags.get(sid):
+                print("Streaming canceled by client")
+                break
+
             response_chunks.append(chunk)
             if chunk.text:
                 full_response += chunk.text
                 emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
-        if grounding_enabled:
+
+        # グラウンディング処理（応答がキャンセルされていない場合のみ実施）
+        if grounding_enabled and not cancellation_flags.get(sid):
             all_grounding_links = ''
             all_grounding_queries = ''
             for chunk in response_chunks:
@@ -261,7 +288,9 @@ def handle_message(data):
                                 all_grounding_queries += f'{query} / '
             formatted_metadata = ''
             if all_grounding_queries:
-                all_grounding_queries = ' / '.join(sorted(set(all_grounding_queries.rstrip(' /').split(' / '))))
+                all_grounding_queries = ' / '.join(
+                    sorted(set(all_grounding_queries.rstrip(' /').split(' / ')))
+                )
                 formatted_metadata = '\n\n---\n'
             if all_grounding_links:
                 formatted_metadata += all_grounding_links + '\n'
@@ -270,6 +299,10 @@ def handle_message(data):
             full_response += formatted_metadata
             emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
 
+        # 応答が途中でキャンセルされていた場合は、保存せずに終了
+        if cancellation_flags.get(sid):
+            return
+
         messages.append({'role': 'ai', 'content': full_response})
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, chat._curated_history)
@@ -277,6 +310,10 @@ def handle_message(data):
 
     except Exception as e:
         emit('gemini_response_error', {'error': str(e), 'chat_id': chat_id})
+    finally:
+        # 応答処理終了後にキャンセルフラグを削除
+        cancellation_flags.pop(sid, None)
+
 
 @socketio.on('delete_message')
 def handle_delete_message(data):
