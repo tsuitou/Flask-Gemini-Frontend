@@ -24,6 +24,8 @@ const fileInput = document.getElementById('fileInput');
 const attachButton = document.getElementById('attachButton');
 const modelSelect = document.getElementById('modelSelect');
 const groundingSwitch = document.getElementById('groundingSwitch');
+const attachmentPreview = document.getElementById('attachmentPreview');
+
 
 // State variables
 let username = null;
@@ -281,11 +283,11 @@ function loadChat(selectedChatId) {
   }
   chat_id = selectedChatId;
   socket.emit('load_chat', { username: username, chat_id: selectedChatId });
-  chatsContainer.innerHTML = '';
-  fileData = null;
-  fileName = null;
-  fileMimeType = null;
-	attachmentPreview.innerHTML = '';
+	fileData = null;
+	fileName = null;
+	fileMimeType = null;
+	attachmentPreview.innerHTML = "";
+	fileInput.value = "";
 }
 
 socket.on('chat_loaded', (data) => {
@@ -613,9 +615,6 @@ socket.on('grounding_updated', (data) => {
 attachButton.addEventListener('click', () => {
   fileInput.click();
 });
-
-
-const attachmentPreview = document.getElementById('attachmentPreview');
 
 fileInput.addEventListener('change', () => {
     const file = fileInput.files[0];
