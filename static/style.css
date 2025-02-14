@@ -296,16 +296,16 @@ body.hide-header .header{
 .prompt {
     position: fixed;
     bottom: 0;
-    left: 300px;   /* 左サイドバーの幅と同じ */
-    right: 300px;  /* 右サイドバーの幅と同じ */
-    background: var(--primary-color);
+    left: 250px;   /* 左サイドバーの幅と同じ */
+    right: 250px;  /* 右サイドバーの幅と同じ */
+    background: transparent;
     z-index: 1000;
     padding: 1rem;
 }
 
 .prompt__input-wrapper{
     width: 100%;
-    height: 12rem;
+    height: 10rem;
     display: flex;
     position: relative;
     color: var(--text-color);
@@ -334,11 +334,11 @@ body.hide-header .header{
 .prompt__form-button{
     position: absolute;
     right: 0.5rem;
-    top: 90%;
+    top: 85%;
     transform: translateY(-50%);
     border: none;
-    width: 48px;
-    height: 48px;
+    width: 38px;
+    height: 38px;
     cursor: pointer;
     border-radius: 50%;
     font-size: 1.4rem;
@@ -376,7 +376,7 @@ body.hide-header .header{
 .chats{
     padding: 2rem 1rem; /* padding-bottom を削除 */
     padding-bottom: 100px; /* prompt の高さに合わせて padding-bottom を調整 */
-    max-height: calc(100vh - 200px); /* サイドバーと prompt を考慮した高さ */
+    max-height: calc(100vh - 150px); /* サイドバーと prompt を考慮した高さ */
     overflow-y: auto;
     scrollbar-color: #999 transparent;
     width: 100%; /* 親要素に合わせて幅を調整 */
