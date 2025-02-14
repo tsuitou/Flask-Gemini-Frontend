@@ -545,15 +545,18 @@ td{
     padding: 10px;
 }
 
-pre{
-    position: relative;
-    background-color: var(--secondary-color);
-    padding: 10px 0 0;
-    font-family: monospace;
-    font-size: 14px;
-    border-radius: 10px;
-    margin: 0;
-    overflow-x: auto;
+pre {
+  position: relative;
+  background-color: var(--secondary-color);
+  padding: 10px 0 0;
+  font-family: monospace;
+  font-size: 14px;
+  border-radius: 10px;
+  margin: 0;
+  /* 横スクロールをやめて自動折り返しに変更 */
+  overflow-x: visible;
+  white-space: pre-wrap;       /* 改行を維持しつつ折り返す */
+  word-wrap: break-word;       /* 単語単位での折り返しを有効にする */
 }
 
 code{
