@@ -145,14 +145,15 @@ textarea {
 
 .chat-history {
     margin-bottom: 1.5rem;
+		font-size: 1rem;
 }
 
 .chat-history-item {
-    padding: 0.5rem 0;
-    cursor: pointer;
-    color: var(--text-color);
-    transition: background-color 0.3s ease;
-    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem; /* ホバー領域を拡大 */
+    cursor: pointer; /* アイテム全体がクリック可能であることを示す */
 }
 
 .chat-history-item:hover {
@@ -212,8 +213,8 @@ textarea {
 .switch {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 44px;
+    height: 24px;
 }
 
 .switch input {
@@ -230,19 +231,19 @@ textarea {
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: .4s;
+    transition: .2s;
     border-radius: 34px;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
     background-color: white;
-    transition: .4s;
+    transition: .2s;
     border-radius: 50%;
 }
 
@@ -255,7 +256,7 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-    transform: translateX(26px);
+    transform: translateX(20px);
 }
 
 .slider.round {
@@ -664,12 +665,12 @@ blockquote{
 }
 
 .chat-history-delete-btn {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  color: #e55865;
-  cursor: pointer;
-  margin-left: 8px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    color: #e55865;
+    cursor: pointer;
+    margin-left: 8px;
 }
 
 .attachment-item {

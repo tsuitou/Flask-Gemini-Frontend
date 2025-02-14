@@ -152,6 +152,16 @@ function initializeApp() {
   fetchModelList();
   fetchHistoryList();
   startNewChat();
+	// グローバルに一度だけ登録（他の場所で重複して登録されないようにする）
+	socket.off('chat_deleted'); // 既存のリスナーを削除
+	socket.on('chat_deleted', (data) => {
+		// 削除されたチャットが現在表示中の場合は新規チャットに切り替え
+		if (chat_id === data.chat_id) {
+			startNewChat();
+		}
+		// 履歴一覧を更新
+		fetchHistoryList();
+	});
 }
 
 // ----------------------------------------
@@ -189,55 +199,48 @@ function fetchHistoryList() {
 function displayHistoryList(history) {
   chatHistoryList.innerHTML = '';
 
-  // 「New Chat」項目は削除し、HTML側で新規チャットボタンを先頭に配置するため、
-  // ここでは history の項目のみを表示する
-
-  // historyItems を chat_id の降順（タイムスタンプの場合）で表示
+  // chat_id をキーとした履歴アイテムの配列に変換
   const historyItems = Object.entries(history);
-  historyItems.sort((a, b) => Number(b[0]) - Number(a[0])); // 数値変換（chat_id がタイムスタンプの場合）
+  // 降順に並べ替え
+  historyItems.sort((a, b) => Number(b[0]) - Number(a[0]));
+
   historyItems.forEach(([chatId, chatTitle]) => {
     const historyItem = document.createElement('div');
     historyItem.classList.add('chat-history-item');
+    historyItem.style.cursor = 'pointer';
     
-    // タイトル部分（クリックでチャット読み込み）
-    const titleSpan = document.createElement('span');
-    titleSpan.textContent = chatTitle;
-    titleSpan.style.cursor = 'pointer';
-    titleSpan.addEventListener('click', () => {
+    // 履歴アイテム全体にクリックイベントを設定
+    historyItem.addEventListener('click', () => {
       loadChat(chatId);
       document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
       historyItem.classList.add('active');
     });
     
+    // タイトル部分（単なるテキスト）
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = chatTitle;
+    
     // 削除ボタン
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = '×';
     deleteBtn.classList.add('chat-history-delete-btn');
-		deleteBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			if (confirm('このチャット履歴を削除しますか？')) {
-				socket.emit('delete_chat', { username: username, chat_id: chatId });
-			}
-		});
-
-		// サーバー側から削除完了イベントを受信したら履歴再読み込み
-		socket.on('chat_deleted', (data) => {
-			// 必要に応じて現在表示中のチャットをクリア
-			if (chat_id === data.chat_id) {
-				startNewChat();
-			}
-			fetchHistoryList();
-		});
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('このチャット履歴を削除しますか？')) {
+        socket.emit('delete_chat', { username: username, chat_id: chatId });
+      }
+    });
     
+    // アイテムにタイトルと削除ボタンを追加
     historyItem.appendChild(titleSpan);
     historyItem.appendChild(deleteBtn);
+    
     if (chatId === chat_id) {
       historyItem.classList.add('active');
     }
     chatHistoryList.appendChild(historyItem);
   });
 }
-
 
 // サーバー側からの最新履歴受信時にも自動で再描画
 socket.on('history_list', (data) => {
