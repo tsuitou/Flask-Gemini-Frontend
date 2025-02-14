@@ -285,6 +285,7 @@ function loadChat(selectedChatId) {
   fileData = null;
   fileName = null;
   fileMimeType = null;
+	attachmentPreview.innerHTML = '';
 }
 
 socket.on('chat_loaded', (data) => {
