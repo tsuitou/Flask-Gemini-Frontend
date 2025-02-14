@@ -19,6 +19,7 @@ const chatsContainer = document.getElementById('chats');
 const promptForm = document.querySelector('.prompt__form');
 const promptInput = document.getElementById('promptInput');
 const sendButton = document.getElementById('sendButton');
+const stopButton = document.getElementById('stopButton');
 const fileInput = document.getElementById('fileInput');
 const attachButton = document.getElementById('attachButton');
 const modelSelect = document.getElementById('modelSelect');
@@ -272,11 +273,11 @@ socket.on('chat_created', (data) => {
 function loadChat(selectedChatId) {
   if (!username) return;
   // もし現在応答中ならキャンセルイベントを送信して応答処理を中断する
-	console.log(isGeneratingResponse);
   if (isGeneratingResponse) {
     socket.emit('cancel_stream', { username: username, chat_id: chat_id });
     isGeneratingResponse = false; // クライアント側のフラグもリセット
 		setPromptEnabled(true);
+		toggleResponseButtons(false);
   }
   chat_id = selectedChatId;
   socket.emit('load_chat', { username: username, chat_id: selectedChatId });
@@ -329,22 +330,33 @@ socket.on('message_deleted', (data) => {
 // メッセージ送受信
 // ----------------------------------------
 function setPromptEnabled(enabled) {
-  promptInput.disabled = !enabled;
   sendButton.disabled = !enabled;
   // 送信ボタンのスタイルも変更するなどの工夫があれば追加
+}
+
+function toggleResponseButtons(isResponding) {
+  if (isResponding) {
+    sendButton.style.display = 'none';
+    stopButton.style.display = 'block';
+  } else {
+    sendButton.style.display = 'block';
+    stopButton.style.display = 'none';
+  }
 }
 
 promptForm.addEventListener('submit', handleSendMessage);
 
 function handleSendMessage(e) {
   e.preventDefault();
-  if (isGeneratingResponse) return; // 既に応答中なら送信しない
+  if (isGeneratingResponse) return;
   const message = promptInput.value.trim();
   if (!message && !fileData) return;
   
-  // 応答中フラグをセットして入力欄を無効化
+  // 応答中フラグをセットし、入力欄を無効化
   isGeneratingResponse = true;
   setPromptEnabled(false);
+  // 送信ボタンを隠して停止ボタンを表示
+  toggleResponseButtons(true);
 
   const userMessage = message + (fileName ? `\n\n[添付ファイル: ${fileName}]` : '');
   displayOutgoingMessage(userMessage);
@@ -366,8 +378,8 @@ function handleSendMessage(e) {
   fileData = null;
   fileName = null;
   fileMimeType = null;
-  fileInput.value = '';
 }
+
 
 function displayOutgoingMessage(message) {
   const messageHtml = `
@@ -440,6 +452,7 @@ socket.on('gemini_response_error', (data) => {
   removeLoadingIndicator();
   isGeneratingResponse = false;
   setPromptEnabled(true);  // 入力欄を再有効化
+	toggleResponseButtons(false);
   displayErrorMessage(data.error);
 });
 
@@ -466,6 +479,7 @@ socket.on('gemini_response_complete', (data) => {
   // 応答完了後にプロンプト入力欄を再有効化
   isGeneratingResponse = false;
   setPromptEnabled(true);
+	toggleResponseButtons(false);
 });
 
 function deleteErrorMessage(button) {
@@ -506,6 +520,19 @@ function removeLoadingIndicator() {
 // ----------------------------------------
 // UIヘルパー関数
 // ----------------------------------------
+
+stopButton.addEventListener('click', () => {
+  // 現在応答中ならキャンセルイベントを送信
+  if (isGeneratingResponse) {
+    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
+    // 応答中フラグをリセットして、入力欄を再有効化
+    isGeneratingResponse = false;
+    setPromptEnabled(true);
+    // ボタンを切り替え
+    toggleResponseButtons(false);
+		loadChat(chat_id);
+  }
+});
 
 const createChatMessageElement = (htmlContent, role, ...cssClasses) => {
   const messageElement = document.createElement('div');
