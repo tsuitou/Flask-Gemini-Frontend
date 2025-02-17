@@ -377,7 +377,7 @@ function updateChatDisplay(newHistory) {
     }
   }
   
-  scrollToBottom();
+  // scrollToBottom();
 }
 
 function deleteChatMessage(index) {
@@ -464,7 +464,7 @@ function displayOutgoingMessage(message) {
   // innerText を使用することで、HTMLタグはエスケープされて表示される
   messageElement.querySelector('.message__text').innerText = message;
   chatsContainer.appendChild(messageElement);
-  scrollToBottom();
+  // scrollToBottom();
 }
 
 function displayIncomingMessage(message, index) {
@@ -478,12 +478,10 @@ function displayIncomingMessage(message, index) {
         <div class="message__loading-bar"></div>
       </div>
     </div>
-    <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
-    <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'ai', 'message--incoming');
   chatsContainer.appendChild(messageElement);
-  scrollToBottom();
+  // scrollToBottom();
   return messageElement.querySelector('.message__text');
 }
 
@@ -535,7 +533,7 @@ function displayErrorMessage(error) {
   `;
   const errorElement = createChatMessageElement(errorHtml, 'ai', 'message--error');
   chatsContainer.appendChild(errorElement);
-  scrollToBottom();
+  // scrollToBottom();
 }
 
 socket.on('gemini_response_complete', (data) => {
@@ -569,7 +567,7 @@ function displayLoadingIndicator() {
   `;
   const loadingMessageElement = createChatMessageElement(loadingHtml, 'ai', 'message--incoming', 'message--loading');
   chatsContainer.appendChild(loadingMessageElement);
-  scrollToBottom();
+  // scrollToBottom();
 }
 
 function removeLoadingIndicator() {
