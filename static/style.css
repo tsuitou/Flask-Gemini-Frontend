@@ -145,7 +145,7 @@ textarea {
 
 .chat-history {
     margin-bottom: 1.5rem;
-		font-size: 0.9rem;
+		font-size: 14px;
 }
 
 .chat-history-item {
@@ -283,7 +283,7 @@ input:checked + .slider:before {
     margin: 0 auto;
     max-width: 1000px;
     width: 100%; /* 親要素に合わせて幅を調整 */
-		font-size: 0.9rem;
+		font-size: 14px;
 }
 
 body.hide-header .header{
@@ -316,7 +316,7 @@ body.hide-header .header{
 }
 
 .prompt__form-input{
-    font-size: 1rem;
+    font-size: 14px;
     height: 80%;
     width: 100%;
     border: none;
@@ -602,10 +602,13 @@ code {
     background-color: #000000;
 }
 
-blockquote{
-    padding-left: 60px;
-    line-height: 2.5rem;
-    color: var(--text-color);
+blockquote {
+  padding-left: 30px; /* パディングを少し控えめにする */
+  margin: 1em 0; /* 上下に1emのマージンを追加 */
+  border-left: 4px solid #ccc; /* 左側に線を追加して区別を明確にする */
+  font-style: italic; /* 斜体にする */
+  color: var(--text-color-secondary, #666); /* 少し落ち着いた色にする (カスタムプロパティがない場合は #666 を使用) */
+  line-height: 1.6; /* 行間を調整 */
 }
 
 /* チャットメッセージの削除ボタン */
