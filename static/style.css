@@ -51,7 +51,7 @@ textarea {
 
 .login-form {
     background-color: var(--primary-color);
-    padding: 2rem;
+    padding: 2em;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     width: 300px;
@@ -59,24 +59,24 @@ textarea {
 
 .login-form h2 {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.5em;
     color: var(--text-color);
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1em;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5em;
     color: var(--text-secondary-color);
 }
 
 .form-group input[type="text"],
 .form-group input[type="password"] {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.75em;
     border: 1px solid var(--secondary-hover-color);
     border-radius: 5px;
     color: var(--text-color);
@@ -88,7 +88,7 @@ textarea {
 }
 
 .form-buttons button {
-    padding: 0.75rem 1rem;
+    padding: 0.75em 1em;
     border: none;
     border-radius: 5px;
     background-color: var(--secondary-color);
@@ -103,12 +103,12 @@ textarea {
 
 .error-message {
     color: #e55865;
-    margin-top: 0.5rem;
+    margin-top: 0.5em;
 }
 
 .success-message {
     color: green;
-    margin-top: 0.5rem;
+    margin-top: 0.5em;
 }
 
 /* サイドバーのスタイル */
@@ -128,23 +128,23 @@ textarea {
 .left-sidebar {
     order: 1; /* 左サイドバーを最初に配置 */
     border-right: 1px solid var(--secondary-hover-color);
-    padding-right: 1rem;
+    padding-right: 1em;
 }
 
 .right-sidebar {
     order: 3; /* 右サイドバーを最後に配置 */
     border-left: 1px solid var(--secondary-hover-color);
-    padding-left: 1rem;
+    padding-left: 1em;
 }
 
 .sidebar h3 {
     margin-top: 0;
-    margin-bottom: 1rem;
+    margin-bottom: 1em;
     color: var(--text-secondary-color);
 }
 
 .chat-history {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.5em;
 		font-size: 14px;
 }
 
@@ -152,7 +152,7 @@ textarea {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem; /* ホバー領域を拡大 */
+    padding: 0.5em; /* ホバー領域を拡大 */
     cursor: pointer; /* アイテム全体がクリック可能であることを示す */
 }
 
@@ -166,7 +166,7 @@ textarea {
 }
 
 #newChatButton {
-    padding: 0.75rem 1rem;
+    padding: 0.75em 1em;
     border: none;
     border-radius: 5px;
     background-color: var(--secondary-color);
@@ -183,18 +183,18 @@ textarea {
 /* モデルセレクターのスタイル */
 .model-selector label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5em;
     color: var(--text-secondary-color);
 }
 
 #modelSelect {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.75em;
     border: 1px solid var(--secondary-hover-color);
     border-radius: 5px;
     color: var(--text-color);
     background-color: var(--primary-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.5em;
 }
 
 /* グラウンディングスイッチのスタイル */
@@ -202,7 +202,7 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.5em;
 }
 
 .grounding-switch label {
@@ -300,16 +300,16 @@ body.hide-header .header{
     right: 250px;  /* 右サイドバーの幅と同じ */
     background: transparent;
     z-index: 1000;
-    padding: 1rem;
+    padding: 1em;
 }
 
 .prompt__input-wrapper{
     width: 100%;
-    height: 10rem;
+    height: 10em;
     display: flex;
     position: relative;
     color: var(--text-color);
-    padding: 1rem 1rem;
+    padding: 1em 1em;
     border-radius: 30px;
     background: var(--secondary-color);
 		border: 1px solid var(--secondary-hover-color);
@@ -334,7 +334,7 @@ body.hide-header .header{
 
 .prompt__form-button{
     position: absolute;
-    right: 0.5rem;
+    right: 0.5em;
     top: 85%;
     transform: translateY(-50%);
     border: none;
@@ -342,7 +342,7 @@ body.hide-header .header{
     height: 38px;
     cursor: pointer;
     border-radius: 50%;
-    font-size: 1.4rem;
+    font-size: 1.4em;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -364,18 +364,18 @@ body.hide-header .header{
 }
 
 .prompt__form-input:valid ~ #deleteButton{
-    right: 3.5rem;
+    right: 3.5em;
 }
 
 .prompt__disclaim{
     text-align: center;
     color: var(--placeholder-color);
-    font-size: 0.85rem;
-    margin-top: 1rem;
+    font-size: 0.85em;
+    margin-top: 1em;
 }
 
 .chats{
-    padding: 2rem 1rem; /* padding-bottom を削除 */
+    padding: 2em 1em; /* padding-bottom を削除 */
     padding-bottom: 100px; /* prompt の高さに合わせて padding-bottom を調整 */
     max-height: calc(100vh - 150px); /* サイドバーと prompt を考慮した高さ */
     overflow-y: auto;
@@ -388,7 +388,7 @@ body.hide-header .header{
 
 
 .chats .message--incoming{
-    margin-top: 1.5rem;
+    margin-top: 1.5em;
 }
 
 .chats .message--outgoing:not(:first-child){
@@ -398,7 +398,7 @@ body.hide-header .header{
 .chats .message__content{
     display: flex;
     align-items: flex-start;
-    gap: 1.5rem;
+    gap: 1.5em;
     width: 100%;
 }
 
@@ -409,7 +409,7 @@ body.hide-header .header{
 }
 
 .chats .message--outgoing .message__text{
-	  padding: 1rem 1rem;
+	  padding: 1em 1em;
     border-radius: 30px;
     background: var(--secondary-color);
 }
@@ -460,8 +460,8 @@ body.hide-header .header{
     align-items: center;
     justify-content: center;
     background: none;
-    font-size: 1.25rem;
-    margin-left: 3.5rem;
+    font-size: 1.25em;
+    margin-left: 3.5em;
     transition: background 0.3s ease;
 }
 
@@ -471,7 +471,7 @@ body.hide-header .header{
 
 .chats .message__loading-indicator{
     display: none;
-    gap: 0.6rem;
+    gap: 0.6em;
     width: 100%;
     flex-direction: column;
     margin-bottom: 20px;
@@ -482,9 +482,9 @@ body.hide-header .header{
 }
 
 .chats .message__loading-indicator .message__loading-bar{
-    height: 1rem;
+    height: 1em;
     width: 100%;
-    border-radius: 0.135rem;
+    border-radius: 0.135em;
     background-position: -800px 0;
     background: linear-gradient(to right, #2563eb60 30%, var(--primary-color) 60%, #2563eb60);
     animation: loading 3s linear infinite;
@@ -525,45 +525,168 @@ body.hide-header .header{
     font-size: 18px;
 }
 
-p{
-    margin: 10px;
+/************************************
+ * 見出し
+ ************************************/
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: bold;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  line-height: 1.25;
 }
 
-ul{
-    margin-left: 20px;
+h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.3em;
 }
 
-ol{
-    margin-left: 40px;
+h2 {
+  font-size: 1.75em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.2em;
 }
 
-strong{
-    font-weight: bold;
+h3 {
+  font-size: 1.5em;
 }
 
-em{
-    font-size: italic;
+h4 {
+  font-size: 1.3em;
 }
 
-a{
-    color: #1e90ff;
-    text-decoration: none;
+h5 {
+  font-size: 1.1em;
 }
 
+h6 {
+  font-size: 1em;
+  color: #555;
+}
+
+/************************************
+ * 段落
+ ************************************/
+p {
+  margin: 10px 0;
+}
+
+/************************************
+ * リスト
+ ************************************/
+ul {
+  margin-left: 20px;
+  margin-bottom: 1em;
+  list-style-type: disc; /* デフォルトのドット */
+  padding-left: 0;       /* リストアイコンとの間隔を調整したい場合は調整 */
+}
+
+ol {
+  margin-left: 40px;
+  margin-bottom: 1em;
+  list-style-type: decimal;
+  padding-left: 0;
+}
+
+li {
+  margin: 0.4em 0;
+}
+
+/************************************
+ * 強調・斜体
+ ************************************/
+strong {
+  font-weight: bold;
+}
+
+em {
+  font-style: italic;
+}
+
+/************************************
+ * リンク
+ ************************************/
+a {
+  color: #1e90ff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/************************************
+ * 引用ブロック
+ ************************************/
+blockquote {
+  padding-left: 1em;
+  margin: 1em 0;
+  border-left: 4px solid #ccc;
+  font-style: italic;
+  color: var(--text-color-secondary, #666);
+  line-height: 1.6;
+}
+
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+/* ネストした blockquote へ軽くスタイルを付与する例 */
+blockquote blockquote {
+  border-left: 4px solid #ddd;
+  margin: 0.8em 0;
+}
+
+/************************************
+ * 水平線
+ ************************************/
+hr {
+  border: 0;
+  height: 1px;
+  background-color: #ccc;
+  margin: 2em 0;
+}
+
+/************************************
+ * テーブル
+ ************************************/
 table {
-  border-collapse: collapse; /* セルの境界線を重ねて表示 */
-  width: 100%; /* テーブルの幅を親要素に合わせる */
-  margin-bottom: 1em; /* テーブルの下に余白 */
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
 }
 
-th, td {
-  border: 1px solid #ddd; /* セルに境界線を追加 */
-  padding: 8px; /* セル内に余白を追加 */
-  text-align: left; /* テキストを左寄せ */
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
 }
 
 th {
-  background-color: #f2f2f2; /* ヘッダーの背景色 */
+  background-color: #f2f2f2;
+}
+
+/************************************
+ * 追加要素(フットノート・キャプションなど)
+ ************************************/
+/* フットノートの例 */
+.footnote-ref {
+  font-size: 0.85em;
+  vertical-align: super;
+}
+
+/* キャプションの例 */
+figcaption {
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 0.5em;
 }
 
 
@@ -573,11 +696,10 @@ pre {
   padding: 10px 0 0;
   font-family: monospace;
   border-radius: 10px;
-  margin: 0;
-  /* 横スクロールをやめて自動折り返しに変更 */
-  overflow-x: visible;
-  white-space: pre-wrap;       /* 改行を維持しつつ折り返す */
-  word-wrap: break-word;       /* 単語単位での折り返しを有効にする */
+  margin: 1em 0; /* 上下の余白を追加 */
+  overflow-x: auto; /* 横スクロールを許可 */
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 code {
@@ -602,22 +724,13 @@ code {
     background-color: #000000;
 }
 
-blockquote {
-  padding-left: 30px; /* パディングを少し控えめにする */
-  margin: 1em 0; /* 上下に1emのマージンを追加 */
-  border-left: 4px solid #ccc; /* 左側に線を追加して区別を明確にする */
-  font-style: italic; /* 斜体にする */
-  color: var(--text-color-secondary, #666); /* 少し落ち着いた色にする (カスタムプロパティがない場合は #666 を使用) */
-  line-height: 1.6; /* 行間を調整 */
-}
-
 /* チャットメッセージの削除ボタン */
 .message__delete-button {
     background-color: transparent;
     border: none;
     color: var(--text-secondary-color);
     cursor: pointer;
-    margin-left: 0.5rem;
+    margin-left: 0.5em;
     opacity: 0; /* デフォルトで非表示 */
     transition: opacity 0.3s ease;
 }
@@ -635,11 +748,11 @@ blockquote {
 #attachButton {
     /* sendButton と同様のスタイル */
     transform: translateY(-50%) scale(1); /* sendButton が非表示なので scale(1) に */
-    right: 3.5rem; /* deleteButton がないので調整 */
+    right: 3.5em; /* deleteButton がないので調整 */
 }
 
 .prompt__form-input:valid ~ #attachButton {
-    right: 3.5rem; /* input が valid でも位置を固定 */
+    right: 3.5em; /* input が valid でも位置を固定 */
 }
 
 
@@ -665,7 +778,7 @@ blockquote {
 .attachment-item {
   position: relative;
   display: inline-block;
-  margin-bottom: 1rem;
+  margin-bottom: 1em;
 }
 
 .attachment-delete-btn {
