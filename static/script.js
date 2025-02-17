@@ -607,7 +607,9 @@ const createChatMessageElement = (htmlContent, role, ...cssClasses) => {
 };
 
 const scrollToBottom = () => {
-  chatsContainer.scrollTop = chatsContainer.scrollHeight;
+  setTimeout(() => {
+    chatsContainer.scrollTop = chatsContainer.scrollHeight;
+    }, 0);
 };
 
 const copyMessageToClipboard = (copyButton) => {
