@@ -471,7 +471,6 @@ function displayOutgoingMessage(message) {
     </span>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');
-  // innerText を使用することで、HTMLタグはエスケープされて表示される
   messageElement.querySelector('.message__text').innerText = message;
   chatsContainer.appendChild(messageElement);
   scrollToBottom();
@@ -489,7 +488,7 @@ function displayIncomingMessage(message, index) {
       </div>
     </div>
   `;
-  const messageElement = createChatMessageElement(messageHtml, 'ai', 'message--incoming');
+  const messageElement = createChatMessageElement(messageHtml, 'model', 'message--incoming');
   chatsContainer.appendChild(messageElement);
   // scrollToBottom();
   return messageElement.querySelector('.message__text');
@@ -541,7 +540,7 @@ function displayErrorMessage(error) {
       <i class='bx bx-trash'></i>
     </button>
   `;
-  const errorElement = createChatMessageElement(errorHtml, 'ai', 'message--error');
+  const errorElement = createChatMessageElement(errorHtml, 'model', 'message--error');
   chatsContainer.appendChild(errorElement);
   // scrollToBottom();
 }
@@ -575,7 +574,7 @@ function displayLoadingIndicator() {
       </div>
     </div>
   `;
-  const loadingMessageElement = createChatMessageElement(loadingHtml, 'ai', 'message--incoming', 'message--loading');
+  const loadingMessageElement = createChatMessageElement(loadingHtml, 'model', 'message--incoming', 'message--loading');
   chatsContainer.appendChild(loadingMessageElement);
   // scrollToBottom();
 }

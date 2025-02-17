@@ -154,15 +154,20 @@ def delete_chat(user_dir, chat_id):
         del past_chats[chat_id]
         save_past_chats(user_dir, past_chats)
 
-def find_gemini_index(messages, target_user_messages):
+def find_gemini_index(messages, target_user_messages, include_model_responses=True):
     user_count = 0
     for idx, content in enumerate(messages):
         if content.role == 'user':
             user_count += 1
             if user_count == target_user_messages:
-                while idx + 1 < len(messages) and messages[idx + 1].role == 'model':
-                    idx += 1
-                return idx + 1
+                if include_model_responses:
+                    # ユーザー発言に続くすべてのモデルの応答を含める
+                    while idx + 1 < len(messages) and messages[idx + 1].role == 'model':
+                        idx += 1
+                    return idx + 1
+                else:
+                    # ユーザー発言直後までとする
+                    return idx + 1
     return len(messages)
 
 # ----------------------------------------
@@ -300,7 +305,7 @@ def handle_message(data):
         if cancellation_flags.get(sid):
             return
 
-        messages.append({'role': 'ai', 'content': full_response})
+        messages.append({'role': 'model', 'content': full_response})
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, chat._curated_history)
         emit('gemini_response_complete', {'chat_id': chat_id})
@@ -325,14 +330,20 @@ def handle_delete_message(data):
     if message_index == 0:
         delete_chat(user_dir, chat_id)
     else:
+        # メッセージを先頭から指定インデックスまで残す
+        deleted_message_role = messages[message_index]['role']
         messages = messages[:message_index]
-        target_user_messages = sum(1 for msg in messages[:message_index] if msg['role'] == 'user')
-        gemini_index = find_gemini_index(gemini_history, target_user_messages)
+        # ユーザー発言の数をカウント
+        target_user_messages = sum(1 for msg in messages if msg['role'] == 'user')
+        if deleted_message_role == 'model':
+            gemini_index = find_gemini_index(gemini_history, target_user_messages, include_model_responses=False)
+        else:
+            gemini_index = find_gemini_index(gemini_history, target_user_messages, include_model_responses=True)
         gemini_history = gemini_history[:gemini_index]
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, gemini_history)
 
-    emit('message_deleted', {'chat_id': chat_id, 'index': message_index})
+    emit('message_deleted', {'chat_id': chat_id})
 
 @socketio.on('get_history_list')
 def handle_get_history_list(data):
