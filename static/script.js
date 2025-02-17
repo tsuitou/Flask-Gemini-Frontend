@@ -384,9 +384,9 @@ function updateChatDisplay(newHistory) {
       // 既存メッセージは内容が変わっていれば更新
       if (domNode.dataset.msgContent !== newMsg.content) {
         if (newMsg.role === 'user') {
-          textElement.textContent = newMsg.content;
+          textElement.innerText = newMsg.content;
         } else {
-          textElement.innerText = md.render(newMsg.content);
+          textElement.innerHTML = md.render(newMsg.content);
         }
         domNode.dataset.msgContent = newMsg.content;
       }
