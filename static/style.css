@@ -414,6 +414,10 @@ body.hide-header .header{
     background: var(--secondary-color);
 }
 
+.chats .message--outgoing .message__text p {
+		margin: 0;
+}
+
 .hide{
     display: none !important;
 }
