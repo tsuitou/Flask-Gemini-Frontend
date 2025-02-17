@@ -375,7 +375,7 @@ function updateChatDisplay(newHistory) {
     // 常に末尾は再描画（グラウンディングなど最新状態に更新）
     if (i === newCount - 1) {
       if (newMsg.role === 'user') {
-        textElement.textContent = newMsg.content;
+        textElement.innerText = newMsg.content;
       } else {
         textElement.innerHTML = md.render(newMsg.content);
       }
@@ -386,7 +386,7 @@ function updateChatDisplay(newHistory) {
         if (newMsg.role === 'user') {
           textElement.textContent = newMsg.content;
         } else {
-          textElement.innerHTML = md.render(newMsg.content);
+          textElement.innerText = md.render(newMsg.content);
         }
         domNode.dataset.msgContent = newMsg.content;
       }
