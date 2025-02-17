@@ -318,7 +318,12 @@ function displayMessages(messages) {
        <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>`,
       message.role, message.role === 'user' ? 'message--outgoing' : 'message--incoming'
     );
-    messageElement.querySelector('.message__text').innerHTML = md.render(message.content);
+		const textElement = messageElement.querySelector('.message__text');
+		if (message.role === 'user') {
+			textElement.innerText = message.content;
+		} else {
+			textElement.innerHTML = md.render(message.content);
+		}
     chatsContainer.appendChild(messageElement);
   });
 }
@@ -349,42 +354,48 @@ function createMessageNode(msg, index) {
 function updateChatDisplay(newHistory) {
   const newCount = newHistory.length;
   
-  // DOMにあるメッセージ数より多い場合、末尾から削除
-	if (chatsContainer.children.length > 0) {
-		while (chatsContainer.children.length >= newCount) {
-			chatsContainer.removeChild(chatsContainer.lastChild);
-		}
-	}
+  // DOMにあるメッセージ数が新しい履歴より多い場合、末尾から削除
+  while (chatsContainer.children.length > newCount) {
+    chatsContainer.removeChild(chatsContainer.lastChild);
+  }
   
-  // 削除後に現在の件数を再取得
+  // DOMに足りない場合は新規要素を追加
   let currentCount = chatsContainer.children.length;
-  
-  // DOMに足りない場合、新規要素を追加
   for (let i = currentCount; i < newCount; i++) {
     const newNode = createMessageNode(newHistory[i], i);
     chatsContainer.appendChild(newNode);
   }
   
-  // すべての要素について、内容の更新（常に末尾は再描画）
+  // すべての要素について、内容が変更されている場合に更新
   for (let i = 0; i < newCount; i++) {
-		idx = newCount - 1
     const newMsg = newHistory[i];
     const domNode = chatsContainer.children[i];
+    const textElement = domNode.querySelector('.message__text');
+    
+    // 常に末尾は再描画（グラウンディングなど最新状態に更新）
     if (i === newCount - 1) {
-      // 常に末尾は再描画（グラウンディングメタデータなど最新状態に更新）
-      domNode.querySelector('.message__text').innerHTML = md.render(newMsg.content);
+      if (newMsg.role === 'user') {
+        textElement.textContent = newMsg.content;
+      } else {
+        textElement.innerHTML = md.render(newMsg.content);
+      }
       domNode.dataset.msgContent = newMsg.content;
     } else {
       // 既存メッセージは内容が変わっていれば更新
       if (domNode.dataset.msgContent !== newMsg.content) {
-        domNode.querySelector('.message__text').innerHTML = md.render(newMsg.content);
+        if (newMsg.role === 'user') {
+          textElement.textContent = newMsg.content;
+        } else {
+          textElement.innerHTML = md.render(newMsg.content);
+        }
         domNode.dataset.msgContent = newMsg.content;
       }
     }
   }
   
-  // scrollToBottom();
+  //scrollToBottom();
 }
+
 
 function deleteChatMessage(index) {
   if (!username || !chat_id) return;
