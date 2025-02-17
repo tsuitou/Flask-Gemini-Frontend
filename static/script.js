@@ -355,9 +355,11 @@ function updateChatDisplay(newHistory) {
   const newCount = newHistory.length;
   
   // DOMにあるメッセージ数が新しい履歴より多い場合、末尾から削除
-  while (chatsContainer.children.length > newCount) {
-    chatsContainer.removeChild(chatsContainer.lastChild);
-  }
+	if (chatsContainer.children.length > 0) {
+		while (chatsContainer.children.length >= newCount) {
+			chatsContainer.removeChild(chatsContainer.lastChild);
+		}
+	}
   
   // DOMに足りない場合は新規要素を追加
   let currentCount = chatsContainer.children.length;

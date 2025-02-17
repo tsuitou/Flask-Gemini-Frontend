@@ -580,7 +580,7 @@ p {
  * リスト
  ************************************/
 ul {
-  margin-left: 20px;
+  margin-left: 40px;
   margin-bottom: 1em;
   list-style-type: disc; /* デフォルトのドット */
   padding-left: 0;       /* リストアイコンとの間隔を調整したい場合は調整 */
