@@ -36,6 +36,7 @@ let isGeneratingResponse = false;
 let fileData = null;
 let fileName = null;
 let fileMimeType = null;
+let sameChat = false;
 
 const md = window.markdownit({
   html: false, // htmlタグを有効にする
@@ -264,6 +265,7 @@ function startNewChat() {
   fileData = null;
   fileName = null;
   fileMimeType = null;
+	sameChat = false;
 }
 
 socket.on('chat_created', (data) => {
@@ -281,6 +283,7 @@ function loadChat(selectedChatId) {
 		setPromptEnabled(true);
 		toggleResponseButtons(false);
   }
+	if (chat_id === selectedChatId) sameChat = true;
   chat_id = selectedChatId;
   socket.emit('load_chat', { username: username, chat_id: selectedChatId });
 	fileData = null;
@@ -291,12 +294,13 @@ function loadChat(selectedChatId) {
 }
 
 socket.on('chat_loaded', (data) => {
-	if (chat_id === data.chat_id) {
+	if (sameChat) {
 		updateChatDisplay(data.messages);
+		sameChat = false;
 	} else {
-		chat_id = data.chat_id;
+		displayMessages(data.messages);
+		scrollToBottom();
 	}
-  displayMessages(data.messages);
   // チャット全体再描画後にコードブロックを処理する
   hljs.highlightAll();
   addCopyButtonToCodeBlocks();
@@ -317,7 +321,6 @@ function displayMessages(messages) {
     messageElement.querySelector('.message__text').innerHTML = md.render(message.content);
     chatsContainer.appendChild(messageElement);
   });
-  scrollToBottom();
 }
 
 // ヘルパー関数：新規メッセージDOM要素を生成する
@@ -347,9 +350,11 @@ function updateChatDisplay(newHistory) {
   const newCount = newHistory.length;
   
   // DOMにあるメッセージ数より多い場合、末尾から削除
-  while (chatsContainer.children.length > newCount) {
-    chatsContainer.removeChild(chatsContainer.lastChild);
-  }
+	if (chatsContainer.children.length > 0) {
+		while (chatsContainer.children.length >= newCount) {
+			chatsContainer.removeChild(chatsContainer.lastChild);
+		}
+	}
   
   // 削除後に現在の件数を再取得
   let currentCount = chatsContainer.children.length;
@@ -362,6 +367,7 @@ function updateChatDisplay(newHistory) {
   
   // すべての要素について、内容の更新（常に末尾は再描画）
   for (let i = 0; i < newCount; i++) {
+		idx = newCount - 1
     const newMsg = newHistory[i];
     const domNode = chatsContainer.children[i];
     if (i === newCount - 1) {
@@ -386,10 +392,14 @@ function deleteChatMessage(index) {
 }
 
 socket.on('message_deleted', (data) => {
-  if (chat_id === data.chat_id) {
-    loadChat(chat_id);
-    fetchHistoryList();
-  }
+	if (data.index === 0) {
+		startNewChat();
+	} else { 
+		if (chat_id === data.chat_id) {
+			loadChat(chat_id);
+			fetchHistoryList();
+		}
+	}
 });
 
 // ----------------------------------------
@@ -464,7 +474,7 @@ function displayOutgoingMessage(message) {
   // innerText を使用することで、HTMLタグはエスケープされて表示される
   messageElement.querySelector('.message__text').innerText = message;
   chatsContainer.appendChild(messageElement);
-  // scrollToBottom();
+  scrollToBottom();
 }
 
 function displayIncomingMessage(message, index) {
@@ -538,10 +548,10 @@ function displayErrorMessage(error) {
 
 socket.on('gemini_response_complete', (data) => {
   if (chat_id !== data.chat_id) return;
+  isGeneratingResponse = false;
   // 応答完了時に最新のチャット履歴を再描画する
   loadChat(chat_id);
   // 応答完了後にプロンプト入力欄を再有効化
-  isGeneratingResponse = false;
   setPromptEnabled(true);
 	toggleResponseButtons(false);
 });
@@ -656,8 +666,6 @@ const throttle = (callback, limit) => {
     }
   };
 };
-
-
 
 // ----------------------------------------
 // グラウンディング

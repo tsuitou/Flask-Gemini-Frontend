@@ -386,11 +386,6 @@ body.hide-header .header{
     align-items: center; /* 水平方向中央揃え */
 }
 
-.message--outgoing .message__text{
-	  padding: 1rem 1rem;
-    border-radius: 30px;
-    background: var(--secondary-color);
-}
 
 .chats .message--incoming{
     margin-top: 1.5rem;
@@ -411,6 +406,12 @@ body.hide-header .header{
     color: var(--text-color);
     white-space: normal;
     margin-top: 10px;
+}
+
+.chats .message--outgoing .message__text{
+	  padding: 1rem 1rem;
+    border-radius: 30px;
+    background: var(--secondary-color);
 }
 
 .hide{

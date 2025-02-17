@@ -199,15 +199,12 @@ def handle_get_model_list():
 def handle_cancel_stream(data):
     sid = request.sid
     cancellation_flags[sid] = True
-    print(f"Cancellation requested for sid {sid} on chat {data.get('chat_id')}")
 
 @socketio.on('send_message')
 def handle_message(data):
     # 現在のクライアントのセッションIDを取得し、キャンセルフラグをリセット
     sid = request.sid
     cancellation_flags[sid] = False
-    print(cancellation_flags)
-    print(sid)
 
     username = data.get('username')
     chat_id = data.get('chat_id')
@@ -335,7 +332,7 @@ def handle_delete_message(data):
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, gemini_history)
 
-    emit('message_deleted', {'chat_id': chat_id})
+    emit('message_deleted', {'chat_id': chat_id, 'index': message_index})
 
 @socketio.on('get_history_list')
 def handle_get_history_list(data):
