@@ -291,8 +291,11 @@ function loadChat(selectedChatId) {
 }
 
 socket.on('chat_loaded', (data) => {
-  chatsContainer.innerHTML = '';
-  chat_id = data.chat_id;
+	if (chat_id === data.chat_id) {
+		updateChatDisplay(data.messages);
+	} else {
+		chat_id = data.chat_id;
+	}
   displayMessages(data.messages);
   // チャット全体再描画後にコードブロックを処理する
   hljs.highlightAll();
@@ -314,6 +317,66 @@ function displayMessages(messages) {
     messageElement.querySelector('.message__text').innerHTML = md.render(message.content);
     chatsContainer.appendChild(messageElement);
   });
+  scrollToBottom();
+}
+
+// ヘルパー関数：新規メッセージDOM要素を生成する
+function createMessageNode(msg, index) {
+  const avatarURL = msg.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL;
+  const messageClass = msg.role === 'user' ? 'message--outgoing' : 'message--incoming';
+  const htmlContent = `
+    <div class="message__content">
+      <img class="message__avatar" src="${avatarURL}" alt="${msg.role} avatar">
+      <p class="message__text"></p>
+    </div>
+    <button class="message__delete-button" onclick="deleteChatMessage(${index})">
+      <i class='bx bx-trash'></i>
+    </button>
+    <span onClick="copyMessageToClipboard(this)" class="message__icon hide">
+      <i class='bx bx-copy-alt'></i>
+    </span>
+  `;
+  const node = createChatMessageElement(htmlContent, msg.role, messageClass);
+  // 現在のメッセージ内容をデータ属性として保持
+  node.dataset.msgContent = msg.content;
+  return node;
+}
+
+// 差分更新用の関数
+function updateChatDisplay(newHistory) {
+  const newCount = newHistory.length;
+  
+  // DOMにあるメッセージ数より多い場合、末尾から削除
+  while (chatsContainer.children.length > newCount) {
+    chatsContainer.removeChild(chatsContainer.lastChild);
+  }
+  
+  // 削除後に現在の件数を再取得
+  let currentCount = chatsContainer.children.length;
+  
+  // DOMに足りない場合、新規要素を追加
+  for (let i = currentCount; i < newCount; i++) {
+    const newNode = createMessageNode(newHistory[i], i);
+    chatsContainer.appendChild(newNode);
+  }
+  
+  // すべての要素について、内容の更新（常に末尾は再描画）
+  for (let i = 0; i < newCount; i++) {
+    const newMsg = newHistory[i];
+    const domNode = chatsContainer.children[i];
+    if (i === newCount - 1) {
+      // 常に末尾は再描画（グラウンディングメタデータなど最新状態に更新）
+      domNode.querySelector('.message__text').innerHTML = md.render(newMsg.content);
+      domNode.dataset.msgContent = newMsg.content;
+    } else {
+      // 既存メッセージは内容が変わっていれば更新
+      if (domNode.dataset.msgContent !== newMsg.content) {
+        domNode.querySelector('.message__text').innerHTML = md.render(newMsg.content);
+        domNode.dataset.msgContent = newMsg.content;
+      }
+    }
+  }
+  
   scrollToBottom();
 }
 
