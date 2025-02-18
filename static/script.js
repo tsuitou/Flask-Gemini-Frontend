@@ -607,6 +607,12 @@ function removeLoadingIndicator() {
 // UIヘルパー関数
 // ----------------------------------------
 
+promptInput.addEventListener('input', function() {
+    // 一度高さをリセットして再計算
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+
 stopButton.addEventListener('click', () => {
   // 現在応答中ならキャンセルイベントを送信
   if (isGeneratingResponse) {

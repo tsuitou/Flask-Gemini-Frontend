@@ -228,7 +228,7 @@ def handle_message(data):
     # 新規チャットの場合、past_chats にタイトルを登録
     past_chats = load_past_chats(user_dir)
     if chat_id not in past_chats:
-        chat_title = message[:22]
+        chat_title = message[:29]
         past_chats[chat_id] = chat_title
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats}, broadcast=True)
