@@ -72,87 +72,90 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
 		<script>
-			hljs.registerLanguage('csv', function(hljs) {
-				return {
-					name: 'CSV',
-					case_insensitive: true, // 大文字・小文字を区別しない
-					keywords: '', // キーワードなし
-					contains: [
-						hljs.C_LINE_COMMENT_MODE, // 行コメント (CSVでは一般的ではないですが、念のため)
-						hljs.C_BLOCK_COMMENT_MODE, // ブロックコメント (CSVでは一般的ではないですが、念のため)
-						hljs.QUOTE_STRING_MODE, // ダブルクォート文字列
-						{
-							className: 'number', // 数値
-							begin: hljs.C_NUMBER_RE
-						},
-						{
-							className: 'punctuation', // 区切り文字 (カンマ)
-							begin: ',',
-							relevance: 0 // 重要度を下げる (他のハイライトを優先するため)
-						}
-					]
-				};
-			});
-			hljs.registerLanguage('vba', function(hljs) {
-				const KEYWORDS = {
-					keyword:
-						'Sub Function Dim As String Integer Long Boolean Variant Object Set With End If Else For Next Do While Until Exit Do Exit For Exit Sub Exit Function Get Let Property Const Private Public Friend Static Optional ByVal ByRef New Me ' +
-						'If Then ElseIf EndIf Select Case EndSelect Case Else Default Else Case ' +
-						'For To Step Next Each In ' +
-						'Do While Until Loop ' +
-						'With End With ' +
-						'On Error GoTo Resume Next Resume Exit Sub Exit Function ' +
-						'Declare PtrSafe Lib Alias', // PtrSafe と Alias は 64bit VBA で重要
-					literal:
-						'True False Nothing Null Empty Missing',
-					built_in:
-						'Debug MsgBox InputBox Chr ChrW Len UCase LCase Trim LTrim RTrim Left Right Mid Date Time Now IsNull IsEmpty IsNumeric IsDate IsObject TypeName ' +
-						'Excel Word PowerPoint CreateObject GetObject Shell' // よく使うオブジェクト
-				};
+		/************************************************
+		 * CSV 用のカスタム言語定義
+		 ************************************************/
+		hljs.registerLanguage("csv", function(hljs) {
+			// ダブルクォートで囲まれたフィールドを表現 ("" はエスケープ用)
+			const QUOTED_FIELD = {
+				className: 'string',
+				begin: /"/,
+				end: /"/,
+				contains: [
+					{ begin: /""/ } // 連続した二重引用符をエスケープとして扱う
+				]
+			};
 
-				const STRING = {
-					className: 'string',
-					begin: /"/, end: /"/,
-					illegal: /\n/,
-					contains: [hljs.BACKSLASH_ESCAPE, {className: 'subst', begin: /{{/, end: /}}/}]
-				};
+			// ダブルクォートされていないフィールド (カンマ/改行まで)
+			const UNQUOTED_FIELD = {
+				className: 'string',
+				begin: /[^",\n]+/
+			};
 
-				const NUMBER = {
-					className: 'number',
-					variants: [
-						{ begin: hljs.C_NUMBER_RE + '[#%&]' }, // Integer types
-						hljs.C_NUMBER_MODE
-					],
-					relevance: 0
-				};
-
-				return {
-					name: 'VBA',
-					aliases: ['visualbasic'], // 他の言語名でも認識させる
-					case_insensitive: true,
-					keywords: KEYWORDS,
-					contains: [
-						hljs.COMMENT(
-							/('|\brem\b)/, // シングルクォートまたは REM で始まるコメント
-							/$/,
+			return {
+				// CSV を行単位で処理
+				contains: [
+					{
+						// 行の開始
+						begin: /^/,
+						end: /$/,
+						// 1行内で繰り返し出現するフィールドとカンマを定義
+						contains: [
+							QUOTED_FIELD,
+							UNQUOTED_FIELD,
 							{
-								relevance: 0
+								className: 'symbol', // カンマをハイライトしたい場合
+								begin: /,/
 							}
-						),
-						STRING,
-						NUMBER,
-						{
-							className: 'meta',
-							begin: '#', end: '$',
-							keywords: { keyword: 'If Then Else ElseIf EndIf Const Declare' }
-						},
-						{
-							className: 'attribute',
-							begin: '^\\s*\[', end: '\]' // Attribute annotations
-						},
-					]
-				};
-			});
+						]
+					}
+				]
+			};
+		});
+
+		/************************************************
+		 * VBA 用のカスタム言語定義
+		 ************************************************/
+		hljs.registerLanguage("vba", function(hljs) {
+			// 代表的なVBAのキーワード
+			const VBA_KEYWORDS = [
+				// 制御構文・宣言など
+				'If', 'Then', 'Else', 'ElseIf', 'End', 'Select', 'Case',
+				'For', 'Each', 'In', 'To', 'Next', 'Step', 'While', 'Wend',
+				'Do', 'Loop', 'Until', 'Exit', 'Sub', 'Function', 'Property',
+				'With', 'Return', 'Goto', 'GoSub', 'Call',
+
+				// 変数宣言関連
+				'Dim', 'As', 'ReDim', 'Set', 'Public', 'Private', 'Option', 'Explicit',
+				'Const', 'Static',
+
+				// エラー処理
+				'On', 'Error', 'Resume',
+
+				// VBA組み込み関数・ステートメントの例 (一部)
+				'MsgBox', 'InputBox', 'Debug', 'Print'
+			].join(' ');
+
+			return {
+				name: 'VBA',
+				case_insensitive: true, // VBAは基本的に大文字小文字を区別しない
+				keywords: {
+					keyword: VBA_KEYWORDS
+				},
+				contains: [
+					// シングルクォートによるコメント
+					hljs.COMMENT(/'/, /$/),
+					// Rem で始まるコメント (古いVB風)
+					hljs.COMMENT(/\bRem\b/, /$/),
+
+					// 文字列 (ダブルクォート)
+					hljs.QUOTE_STRING_MODE,
+
+					// 数値 (10進, 浮動小数, &Hで始まる16進など)
+					hljs.NUMBER_MODE
+				]
+			};
+		});
 		</script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
