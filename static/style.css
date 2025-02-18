@@ -307,7 +307,7 @@ body.hide-header .header{
     width: 100%;
     /* 固定の高さではなく、最小高さを指定して内容に応じて拡大できるように */
     min-height: 1em;
-		max-height: 16em;
+		max-height: 40em;
     display: flex;
     position: relative;
     color: var(--text-color);
@@ -328,7 +328,10 @@ body.hide-header .header{
     margin-bottom: 2em;
     background: var(--secondary-color);
     overflow-y: auto;
-    max-height: 8em;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-height: 36em;
 }
 
 .prompt__form-input:focus ~ .prompt__form-button:hover{
