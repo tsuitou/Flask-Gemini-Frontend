@@ -25,6 +25,7 @@ const attachButton = document.getElementById('attachButton');
 const modelSelect = document.getElementById('modelSelect');
 const groundingSwitch = document.getElementById('groundingSwitch');
 const attachmentPreview = document.getElementById('attachmentPreview');
+const dragOverlay = document.getElementById('dragOverlay');
 
 
 // State variables
@@ -450,6 +451,7 @@ function handleSendMessage(e) {
   const userMessage = message + (fileName ? `\n\n[添付ファイル: ${fileName}]` : '');
   displayOutgoingMessage(userMessage);
   promptInput.value = '';
+	promptInput.style.height = 'auto';
 
   const messageData = {
     username: username,
@@ -701,6 +703,87 @@ socket.on('grounding_updated', (data) => {
 // ----------------------------------------
 // ファイル添付
 // ----------------------------------------
+// ドラッグ＆ドロップ関連のイベントリスナー
+document.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    dragOverlay.classList.add('dragover');
+});
+
+// 'dragleave' イベントは、要素からマウスが離れたときに発生
+document.addEventListener('dragleave', (event) => {
+    // body の外にドラッグが出た場合のみ、オーバーレイを非表示にする
+    if (!event.relatedTarget) {
+        dragOverlay.classList.remove('dragover');
+    }
+});
+
+document.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dragOverlay.classList.remove('dragover');
+
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        handleFile(file);
+    }
+});
+
+// transitionend イベントを監視し、opacity が 0 になった後に display を none に設定
+dragOverlay.addEventListener('transitionend', () => {
+  if (dragOverlay.style.opacity === '0') {
+    dragOverlay.style.display = 'none';
+  }
+});
+
+
+
+function handleFile(file) {
+    if (file.size > 20 * 1024 * 1024) {
+        alert("添付ファイルの容量は20MBを超えることはできません。");
+        fileData = null;
+        fileName = null;
+        fileMimeType = null;
+        fileInput.value = ""; // ファイル入力欄をリセット
+        attachmentPreview.innerHTML = ""; // 添付プレビューもクリア
+        return;
+    }
+
+    fileName = file.name;
+    fileMimeType = file.type || 'application/octet-stream';
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        // Base64部分を取得
+        fileData = event.target.result.split(',')[1];
+        let previewHTML = '';
+        if (fileMimeType.startsWith('image/')) {
+            previewHTML = `
+              <div class="attachment-item">
+                <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
+                <button class="attachment-delete-btn">×</button>
+              </div>
+            `;
+        } else {
+            previewHTML = `
+              <div class="attachment-item">
+                <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                <button class="attachment-delete-btn">×</button>
+              </div>
+            `;
+        }
+        attachmentPreview.innerHTML = previewHTML;
+        // 削除ボタンのイベント追加
+        const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
+        deleteBtn.addEventListener('click', () => {
+            fileData = null;
+            fileName = null;
+            fileMimeType = null;
+            attachmentPreview.innerHTML = "";
+            fileInput.value = "";
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
 attachButton.addEventListener('click', () => {
   fileInput.click();
 });
@@ -708,51 +791,7 @@ attachButton.addEventListener('click', () => {
 fileInput.addEventListener('change', () => {
     const file = fileInput.files[0];
     if (file) {
-        // 20MB = 20 * 1024 * 1024 バイト
-        if (file.size > 20 * 1024 * 1024) {
-            alert("添付ファイルの容量は20MBを超えることはできません。");
-            fileData = null;
-            fileName = null;
-            fileMimeType = null;
-            fileInput.value = ""; // ファイル入力欄をリセット
-            attachmentPreview.innerHTML = ""; // 添付プレビューもクリア
-            return;
-        }
-
-        fileName = file.name;
-        fileMimeType = file.type || 'application/octet-stream';
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            // Base64部分を取得
-            fileData = event.target.result.split(',')[1];
-            let previewHTML = '';
-            if (fileMimeType.startsWith('image/')) {
-                previewHTML = `
-                  <div class="attachment-item">
-                    <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
-                    <button class="attachment-delete-btn">×</button>
-                  </div>
-                `;
-            } else {
-                previewHTML = `
-                  <div class="attachment-item">
-                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
-                    <button class="attachment-delete-btn">×</button>
-                  </div>
-                `;
-            }
-            attachmentPreview.innerHTML = previewHTML;
-            // 削除ボタンのイベント追加
-            const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
-            deleteBtn.addEventListener('click', () => {
-                fileData = null;
-                fileName = null;
-                fileMimeType = null;
-                attachmentPreview.innerHTML = "";
-                fileInput.value = "";
-            });
-        };
-        reader.readAsDataURL(file);
+				handleFile(file);
     } else {
         fileData = null;
         fileName = null;
