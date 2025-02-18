@@ -306,7 +306,7 @@ input:checked + .slider:before {
 .prompt__form{
     margin: 0 auto;
     max-width: 90%;
-    width: 100%; /* 親要素に合わせて幅を調整 */
+    width: auto; /* 親要素に合わせて幅を調整 */
 		font-size: 14px;
 }
 
