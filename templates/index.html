@@ -71,6 +71,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+		<script>
+			hljs.registerLanguage('csv', function(hljs) {
+				return {
+					name: 'CSV',
+					case_insensitive: true, // 大文字・小文字を区別しない
+					keywords: '', // キーワードなし
+					contains: [
+						hljs.C_LINE_COMMENT_MODE, // 行コメント (CSVでは一般的ではないですが、念のため)
+						hljs.C_BLOCK_COMMENT_MODE, // ブロックコメント (CSVでは一般的ではないですが、念のため)
+						hljs.QUOTE_STRING_MODE, // ダブルクォート文字列
+						{
+							className: 'number', // 数値
+							begin: hljs.C_NUMBER_RE
+						},
+						{
+							className: 'punctuation', // 区切り文字 (カンマ)
+							begin: ',',
+							relevance: 0 // 重要度を下げる (他のハイライトを優先するため)
+						}
+					]
+				};
+			});
+		</script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
