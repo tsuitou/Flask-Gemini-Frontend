@@ -738,6 +738,7 @@ dragOverlay.addEventListener('transitionend', () => {
 
 
 function handleFile(file) {
+    // 20MB 超えるかどうかのチェック
     if (file.size > 20 * 1024 * 1024) {
         alert("添付ファイルの容量は20MBを超えることはできません。");
         fileData = null;
@@ -748,40 +749,103 @@ function handleFile(file) {
         return;
     }
 
-    fileName = file.name;
-    fileMimeType = file.type || 'application/octet-stream';
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        // Base64部分を取得
-        fileData = event.target.result.split(',')[1];
-        let previewHTML = '';
-        if (fileMimeType.startsWith('image/')) {
-            previewHTML = `
-              <div class="attachment-item">
-                <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
-                <button class="attachment-delete-btn">×</button>
-              </div>
-            `;
-        } else {
-            previewHTML = `
-              <div class="attachment-item">
-                <p>添付ファイル: ${fileName} (${fileMimeType})</p>
-                <button class="attachment-delete-btn">×</button>
-              </div>
-            `;
-        }
-        attachmentPreview.innerHTML = previewHTML;
-        // 削除ボタンのイベント追加
-        const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
-        deleteBtn.addEventListener('click', () => {
-            fileData = null;
-            fileName = null;
-            fileMimeType = null;
-            attachmentPreview.innerHTML = "";
-            fileInput.value = "";
-        });
-    };
-    reader.readAsDataURL(file);
+    // 拡張子チェック (xlsx / xlsm の場合はテキスト変換)
+    if (/\.(xlsx|xlsm)$/i.test(file.name)) {
+        // SheetJS を使った変換用の読み込み (ArrayBuffer で読み込み)
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            // SheetJS で Workbook を読み込む
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // テキスト出力用の変数
+            let textOutput = '';
+
+            // 全てのシートをループして CSV(またはTSV) 文字列に変換
+            workbook.SheetNames.forEach((sheetName) => {
+                const worksheet = workbook.Sheets[sheetName];
+                // CSV 形式で取得 (タブ区切りなら sheet_to_txt などに切り替える)
+                const csv = XLSX.utils.sheet_to_csv(worksheet);
+                // シート名や区切りを入れたい場合は適宜追記
+                textOutput += `=== Sheet: ${sheetName} ===\n${csv}\n\n`;
+            });
+
+            // テキストデータをBlob化
+            const blob = new Blob([textOutput], { type: 'text/plain' });
+            const textReader = new FileReader();
+
+            // Blob から DataURL(base64) に変換してプレビュー用に格納
+            textReader.onload = (textEvent) => {
+                // 先頭の "data:text/plain;base64," などを除去してBase64部分だけを取得
+                fileData = textEvent.target.result.split(',')[1];
+                // 拡張子を .txt に差し替え
+                fileName = file.name.replace(/\.(xlsx|xlsm)$/i, '.txt');
+                fileMimeType = 'text/plain';
+
+                // プレビュー表記
+                const previewHTML = `
+                  <div class="attachment-item">
+                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                    <button class="attachment-delete-btn">×</button>
+                  </div>
+                `;
+                attachmentPreview.innerHTML = previewHTML;
+
+                // 削除ボタンのイベント追加
+                const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
+                deleteBtn.addEventListener('click', () => {
+                    fileData = null;
+                    fileName = null;
+                    fileMimeType = null;
+                    attachmentPreview.innerHTML = "";
+                    fileInput.value = "";
+                });
+            };
+            // Blob から DataURL に変換開始
+            textReader.readAsDataURL(blob);
+        };
+        // Excel ファイルを ArrayBuffer 形式で読み込み
+        reader.readAsArrayBuffer(file);
+    } else {
+        // 上記以外 (画像やPDFなど) のファイルは従来どおり DataURL で読み込む
+        fileName = file.name;
+        fileMimeType = file.type || 'application/octet-stream';
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            fileData = event.target.result.split(',')[1];
+
+            let previewHTML = '';
+            if (fileMimeType.startsWith('image/')) {
+                // 画像プレビュー
+                previewHTML = `
+                  <div class="attachment-item">
+                    <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
+                    <button class="attachment-delete-btn">×</button>
+                  </div>
+                `;
+            } else {
+                previewHTML = `
+                  <div class="attachment-item">
+                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                    <button class="attachment-delete-btn">×</button>
+                  </div>
+                `;
+            }
+            attachmentPreview.innerHTML = previewHTML;
+
+            // 削除ボタンのイベント追加
+            const deleteBtn = attachmentPreview.querySelector('.attachment-delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                fileData = null;
+                fileName = null;
+                fileMimeType = null;
+                attachmentPreview.innerHTML = "";
+                fileInput.value = "";
+            });
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
 attachButton.addEventListener('click', () => {
