@@ -790,6 +790,9 @@ input:checked + .slider:before {
   position: relative;
   display: inline-block;
   margin-bottom: 1em;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .attachment-delete-btn {
