@@ -785,7 +785,8 @@ function handleFile(file) {
                 // プレビュー表記
                 const previewHTML = `
                   <div class="attachment-item">
-                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                    <p>添付ファイル</p>
+										<p>${fileName}</p>
                     <button class="attachment-delete-btn">×</button>
                   </div>
                 `;
@@ -827,7 +828,8 @@ function handleFile(file) {
             } else {
                 previewHTML = `
                   <div class="attachment-item">
-                    <p>添付ファイル: ${fileName} (${fileMimeType})</p>
+                    <p>添付ファイル</p>
+										<p>${fileName}</p>
                     <button class="attachment-delete-btn">×</button>
                   </div>
                 `;

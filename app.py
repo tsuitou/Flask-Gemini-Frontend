@@ -276,7 +276,7 @@ def handle_message(data):
             if chunk.text:
                 full_response += chunk.text
                 emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
-        formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + str(usage_metadata.total_token_count) + '\n\n'
+        formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
         full_response += formatted_metadata
         emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
         formatted_metadata = ''
