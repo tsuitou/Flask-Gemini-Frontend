@@ -1,570 +1,49 @@
-*{
-    margin: 0;
-    padding: 0;
-    outline: none;
-    box-sizing: border-box;
-		font-family: "メイリオ" ;
-}
-
-:root{
-    --primary-color: #FFFFFF;
-    --secondary-color: #F0F4F9;
-    --secondary-hover-color: #DDE3EA;
-    --focus-color: #E9EEF6;
-    --focus-hover-color: #E1E6ED;
-    --button-hover-color: #E9ECF1;
-    --text-color: #000;
-    --text-secondary-color: #4D4D4D;
-    --heading-secondary-color: #C4C7C5;
-    --placeholder-color: #717075;
-}
-
-
-body{
-    background: var(--primary-color);
-    /* display: flex;  body の flex レイアウトを削除 */
-}
-
-#dragOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* 半透明の背景 */
-    /* 初期状態では非表示（opacity: 0, visibility: hidden） */
-    opacity: 0;
-    visibility: hidden;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    font-size: 2em;
-    z-index: 10000; /* 最前面に表示 */
-    transition: opacity 0.3s ease, visibility 0s ease 0.3s; /* トランジション効果 */
-}
-
-#dragOverlay.dragover {
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.3s ease, visibility 0s ease; /* visibility の遅延を削除 */
-}
-
-textarea {
-  white-space: nowrap;
-  overflow-x: auto;
-	font-size: 14px;
-}
-
-.app-container {
-    display: flex; /* アプリケーション全体を flex レイアウトにする */
-}
-
-/* ログインフォームのスタイル (モーダル表示) */
-.login-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: fixed; /* 画面全体を覆うように fixed 配置 */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* 半透明の背景色 */
-    z-index: 1000; /* 最前面に表示 */
-}
-
-.login-form {
-    background-color: var(--primary-color);
-    padding: 2em;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 350px;
-}
-
-.login-form h2 {
-    text-align: center;
-    margin-bottom: 1.5em;
-    color: var(--text-color);
-}
-
-.form-group {
-    margin-bottom: 1em;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5em;
-    color: var(--text-secondary-color);
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"] {
-    width: 100%;
-    padding: 0.75em;
-    border: 1px solid var(--secondary-hover-color);
-    border-radius: 5px;
-    color: var(--text-color);
-}
-
-.form-buttons {
-    display: flex;
-    justify-content: space-between;
-}
-
-.form-buttons button {
-    padding: 0.75em 1em;
-    border: none;
-    border-radius: 5px;
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.form-buttons button:hover {
-    background-color: var(--secondary-hover-color);
-}
-
-.error-message {
-    color: #e55865;
-    margin-top: 0.5em;
-}
-
-.success-message {
-    color: green;
-    margin-top: 0.5em;
-}
-
-/* サイドバーのスタイル */
-.sidebar {
-    width: 200px; /* サイドバーの幅を調整 */
-    background-color: var(--secondary-color); /* サイドバーの背景色 */
-    padding: 20px;
-    height: 100vh; /* 画面の高さいっぱいにする */
-    overflow-y: auto; /* 必要に応じてスクロール */
-}
-
-.left-sidebar, .right-sidebar {
-    width: 200px;
-    flex-shrink: 0;
-}
-
-.left-sidebar {
-    order: 1; /* 左サイドバーを最初に配置 */
-    border-right: 1px solid var(--secondary-hover-color);
-    padding-right: 1em;
-}
-
-.right-sidebar {
-    order: 3; /* 右サイドバーを最後に配置 */
-    border-left: 1px solid var(--secondary-hover-color);
-    padding-left: 1em;
-}
-
-.sidebar h3 {
-    margin-top: 0;
-    margin-bottom: 1em;
-    color: var(--text-secondary-color);
-}
-
-.chat-history {
-    margin-bottom: 1.5em;
-		font-size: 12px;
-}
-
-.chat-history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5em; /* ホバー領域を拡大 */
-    cursor: pointer; /* アイテム全体がクリック可能であることを示す */
-}
-
-.chat-history-item:hover {
-    background-color: var(--secondary-hover-color);
-}
-
-.chat-history-item.active {
-    background-color: var(--focus-color);
-    font-weight: bold;
-}
-
-#newChatButton {
-    padding: 0.75em 1em;
-    border: none;
-    border-radius: 5px;
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 100%;
-}
-
-#newChatButton:hover {
-    background-color: var(--secondary-hover-color);
-}
-
-/* モデルセレクターのスタイル */
-.model-selector label {
-    display: block;
-    margin-bottom: 0.5em;
-    color: var(--text-secondary-color);
-}
-
-#modelSelect {
-    width: 100%;
-    padding: 0.75em;
-    border: 1px solid var(--secondary-hover-color);
-    border-radius: 5px;
-    color: var(--text-color);
-    background-color: var(--primary-color);
-    margin-bottom: 1.5em;
-}
-
-/* グラウンディングスイッチのスタイル */
-.grounding-switch {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5em;
-}
-
-.grounding-switch label {
-    color: var(--text-secondary-color);
-}
-
-/* スイッチのスタイル (https://www.w3schools.com/howto/howto_css_switch.asp を参考に修正) */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .2s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: .2s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: #2196F3;
-}
-
-input:focus + .slider {
-    box-shadow: 0 0 1px #2196F3;
-}
-
-input:checked + .slider:before {
-    transform: translateX(20px);
-}
-
-.slider.round {
-    border-radius: 34px;
-}
-
-.slider.round:before {
-    border-radius: 50%;
-}
-
-
-.main-content {
-    flex-grow: 1; /* メインコンテンツが残りのスペースを占める */
-    order: 2; /* メインコンテンツを2番目に配置 */
-    display: flex;
-    flex-direction: column; /* chats と prompt を縦に並べる */
-    align-items: center; /* 水平方向中央揃え */
-}
-
-
-.chats .message,
-.chats .message .message__content,
-.prompt__form{
-    margin: 0 auto;
-    max-width: 90%;
-    min-width: 90%; /* 親要素に合わせて幅を調整 */
-		font-size: 14px;
-}
-
-body.hide-header .header{
-    margin: 0;
-    display: none;
-}
-
-/* ... (navbar, prompt, chats, メッセージ関連のスタイルは変更なし) ... */
-
-.prompt {
-    position: fixed;
-    bottom: 0;
-    left: 200px;   /* 左サイドバーの幅と同じ */
-    right: 200px;  /* 右サイドバーの幅と同じ */
-    background: transparent;
-    z-index: 500;
-    padding: 1em;
-}
-
-.prompt__input-wrapper {
-    width: 100%;
-    /* 固定の高さではなく、最小高さを指定して内容に応じて拡大できるように */
-    min-height: 1em;
-		max-height: 40em;
-    display: flex;
-    position: relative;
-    color: var(--text-color);
-    padding: 1em;
-    border-radius: 30px;
-    background: var(--secondary-color);
-    border: 1px solid var(--secondary-hover-color);
-    /* 内部の要素（textarea）の高さに合わせるため、flexのアラインを変更 */
-    align-items: flex-start;
-}
-
-.prompt__form-input {
-    font-size: 14px;
-    height: auto;
-    width: 100%;
-    border: none;
-    resize: none;
-    margin-bottom: 2em;
-    background: var(--secondary-color);
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    max-height: 36em;
-}
-
-.prompt__form-input:focus ~ .prompt__form-button:hover{
-    background: var(--focus-hover-color);
-}
-
-.prompt__form-input::placeholder{
-    color: var(--placeholder-color);
-}
-
-.prompt__form-button{
-		position:  absolute;
-    right: 0.5em;
-    top: calc(100% - 20px);
-    border: none;
-    width: 38px;
-    height: 38px;
-    cursor: pointer;
-    border-radius: 50%;
-    font-size: 1.4em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-color);
-    background: transparent;
-    transition: all 0.3s ease;
-}
-
-.prompt__form-button:hover{
-    background: var(--button-hover-color);
-}
-
-.prompt__form-button#sendButton{
-    transform: translateY(-50%) scale(0);
-}
-
-.prompt__form-button#stopButton{
-    transform: translateY(-50%) scale(1);
-}
-
-.prompt__form-input:valid ~ .prompt__form-button#sendButton{
-    transform: translateY(-50%) scale(1);
-}
-
-.prompt__form-input:valid ~ #deleteButton{
-    right: 3.5em;
-}
-
-.prompt__disclaim{
-    text-align: center;
-    color: var(--placeholder-color);
-    font-size: 0.85em;
-    margin-top: 1em;
-}
-
-.chats{
-    padding: 1em 1em; /* padding-bottom を削除 */
-		padding-bottom: 100px;
-    max-height: calc(100vh - 6em); /* サイドバーと prompt を考慮した高さ */
-    overflow-y: auto;
-    scrollbar-color: #999 transparent;
-    width: 100%; /* 親要素に合わせて幅を調整 */
-    display: flex; /* Flexbox レイアウトを適用 */
-    flex-direction: column; /* メッセージを縦に並べる */
-    align-items: center; /* 水平方向中央揃え */
-}
-
-
-.chats .message--incoming{
-    margin-top: 1.5em;
-}
-
-.chats .message--outgoing:not(:first-child){
-    margin-top: 40px;
-}
-
-.chats .message__content{
-    display: flex;
-    align-items: flex-start;
-    gap: 1.5em;
-    width: 100%;
-}
-
-.chats .message__text{
-    color: var(--text-color);
-    white-space: normal;
-    margin-top: 10px;
-}
-
-.chats .message--outgoing .message__text{
-	  padding: 1em 1em;
-    border-radius: 30px;
-    background: var(--secondary-color);
-}
-
-.chats .message--outgoing .message__text p {
-		margin: 0;
-}
-
-.hide{
-    display: none !important;
-}
-
-.chats .message--error .message__text{
-    color: #e55865;
-}
-
-.chats .message--loading .message__text{
-    display: none;
-}
-
-.chats .message__avatar{
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 50%;
-    object-fit: top center;
-}
-
-.chats .message--loading .message__avatar{
-    animation: none;
-}
-
-@keyframes rotate {
-
-    100%{
-        transform: rotate(360deg);
-    }
-
-}
-
-.chats .message__icon{
-    color: var(--text-color);
-    cursor: pointer;
-    height: 35px;
-    width: 35px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    font-size: 1.25em;
-    margin-left: 3.5em;
-    transition: background 0.3s ease;
-}
-
-.chats .message__icon:hover{
-    background: var(--secondary-hover-color);
-}
-
-.chats .message__loading-indicator{
-    display: none;
-    gap: 0.6em;
-    width: 100%;
-    flex-direction: column;
-    margin-bottom: 20px;
-}
-
-.chats .message--loading .message__loading-indicator{
-    display: flex;
-}
-
-.chats .message__loading-indicator .message__loading-bar{
-    height: 1em;
-    width: 100%;
-    border-radius: 0.135em;
-    background-position: -800px 0;
-    background: linear-gradient(to right, #2563eb60 30%, var(--primary-color) 60%, #2563eb60);
-    animation: loading 3s linear infinite;
-}
-
-.chats .message__loading-indicator .message__loading-bar:first-child{
-    width: 85%;
-}
-
-.chats .message__loading-indicator .message__loading-bar:last-child{
-    width: 70%;
-}
-
-@keyframes loading {
-
-    0%{
-        background-position: -800px 0;
-    }
-    50%{
-        background-position: 0px 0;
-    }
-    100%{
-        background-position: 800px 0;
-    }
-
-}
-
-.code__copy-btn{
-    background-color: transparent;
-    border: none;
-    color: var(--text-color);
-    border-radius: 5px;
-    cursor: pointer;
-    position: absolute;
-    right: 10px;
-    top: 12px;
-    z-index: 10;
-    font-size: 18px;
+/************************************
+ * 1. Reset & Global
+ ************************************/
+* {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  box-sizing: border-box;
+  font-family: "メイリオ";
 }
 
 /************************************
- * 見出し
+ * 2. 変数定義 (:root)
  ************************************/
+:root {
+  --primary-color: #FFFFFF;
+  --secondary-color: #F0F4F9;
+  --secondary-hover-color: #DDE3EA;
+  --focus-color: #E9EEF6;
+  --focus-hover-color: #E1E6ED;
+  --button-hover-color: #E9ECF1;
+  --text-color: #000;
+  --text-secondary-color: #4D4D4D;
+  --heading-secondary-color: #C4C7C5;
+  --placeholder-color: #717075;
+}
+
+/************************************
+ * 3. ベーススタイル
+ *    見出し、段落、リスト、引用、水平線、テーブル、コードなど
+ ************************************/
+
+/* body */
+body {
+  background: var(--primary-color);
+  /* display: flex;  // body の flex レイアウトを削除したい場合はコメントアウト */
+}
+
+/* textarea */
+textarea {
+  white-space: nowrap;
+  overflow-x: auto;
+  font-size: 14px;
+}
+
+/* 見出し */
 h1,
 h2,
 h3,
@@ -606,21 +85,17 @@ h6 {
   color: #555;
 }
 
-/************************************
- * 段落
- ************************************/
+/* 段落 */
 p {
   margin: 10px 0;
 }
 
-/************************************
- * リスト
- ************************************/
+/* リスト */
 ul {
   margin-left: 40px;
   margin-bottom: 1em;
-  list-style-type: disc; /* デフォルトのドット */
-  padding-left: 0;       /* リストアイコンとの間隔を調整したい場合は調整 */
+  list-style-type: disc;
+  padding-left: 0;
 }
 
 ol {
@@ -634,9 +109,7 @@ li {
   margin: 0.4em 0;
 }
 
-/************************************
- * 強調・斜体
- ************************************/
+/* 強調・斜体 */
 strong {
   font-weight: bold;
 }
@@ -645,9 +118,7 @@ em {
   font-style: italic;
 }
 
-/************************************
- * リンク
- ************************************/
+/* リンク */
 a {
   color: #1e90ff;
   text-decoration: none;
@@ -657,9 +128,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/************************************
- * 引用ブロック
- ************************************/
+/* 引用ブロック */
 blockquote {
   padding-left: 1em;
   margin: 1em 0;
@@ -673,15 +142,12 @@ blockquote > *:last-child {
   margin-bottom: 0;
 }
 
-/* ネストした blockquote へ軽くスタイルを付与する例 */
 blockquote blockquote {
   border-left: 4px solid #ddd;
   margin: 0.8em 0;
 }
 
-/************************************
- * 水平線
- ************************************/
+/* 水平線 */
 hr {
   border: 0;
   height: 1px;
@@ -689,9 +155,7 @@ hr {
   margin: 2em 0;
 }
 
-/************************************
- * テーブル
- ************************************/
+/* テーブル */
 table {
   border-collapse: collapse;
   width: 100%;
@@ -709,16 +173,13 @@ th {
   background-color: #f2f2f2;
 }
 
-/************************************
- * 追加要素(フットノート・キャプションなど)
- ************************************/
-/* フットノートの例 */
+/* フットノート (参考例) */
 .footnote-ref {
   font-size: 0.85em;
   vertical-align: super;
 }
 
-/* キャプションの例 */
+/* キャプション (参考例) */
 figcaption {
   text-align: center;
   font-size: 0.9em;
@@ -726,17 +187,18 @@ figcaption {
   margin-top: 0.5em;
 }
 
-
+/* コードブロック */
 pre {
   position: relative;
   background-color: var(--secondary-hover-color);
   padding: 10px 0 0;
   font-family: monospace;
   border-radius: 10px;
-  margin: 1em 0; /* 上下の余白を追加 */
-  overflow-x: auto; /* 横スクロールを許可 */
+  margin: 1em 0;
+  overflow-x: auto;
   white-space: pre-wrap;
-  word-wrap: break-word;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 code {
@@ -747,71 +209,583 @@ code {
   border-radius: 2px;
 }
 
-.code__language-label{
-    position: absolute;
-    font-weight: bold;
-    top: 10px;
-    left: 12px;
-    color: var(--placeholder-color);
-    font-size: 14px;
-    text-transform: capitalize;
+.code__language-label {
+  position: absolute;
+  font-weight: bold;
+  top: 10px;
+  left: 12px;
+  color: var(--placeholder-color);
+  font-size: 14px;
+  text-transform: capitalize;
 }
 
-.hljs{
-    background-color: #000000;
+.hljs {
+  background-color: #000000;
 }
 
-/* チャットメッセージの削除ボタン */
-.message__delete-button {
-    background-color: transparent;
-    border: none;
-    color: var(--text-secondary-color);
-    cursor: pointer;
-    margin-left: 0.5em;
-    opacity: 0; /* デフォルトで非表示 */
-    transition: opacity 0.3s ease;
+.code__copy-btn {
+  background-color: transparent;
+  border: none;
+  color: var(--text-color);
+  border-radius: 5px;
+  cursor: pointer;
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  z-index: 10;
+  font-size: 18px;
 }
 
-.message:hover .message__delete-button {
-    opacity: 1; /* ホバー時に表示 */
+/************************************
+ * 4. レイアウト系コンテナ・構造
+ ************************************/
+
+/* アプリ全体のコンテナ */
+.app-container {
+  display: flex; /* アプリケーション全体を flex レイアウトにする */
 }
 
-.message__delete-button:hover {
-    color: var(--text-color);
+/* ドラッグオーバー時のオーバーレイ */
+#dragOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 2em;
+  z-index: 10000;
+  transition: opacity 0.3s ease, visibility 0s ease 0.3s;
 }
 
-
-/* ファイル添付ボタン */
-#attachButton {
-    /* sendButton と同様のスタイル */
-    transform: translateY(-50%) scale(1); /* sendButton が非表示なので scale(1) に */
-    right: 3.5em; /* deleteButton がないので調整 */
+#dragOverlay.dragover {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s ease;
 }
 
-.prompt__form-input:valid ~ #attachButton {
-    right: 3.5em; /* input が valid でも位置を固定 */
+/* ログインフォーム (モーダル) */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed; /* 画面全体を覆うように */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
-
-/* main-content が非表示の間、prompt を非表示にする */
-#appContainer[style*="display: none"] #mainContent,
-#appContainer[style*="display: none"] .sidebar {
-    display: none;
+.login-form {
+  background-color: var(--primary-color);
+  padding: 2em;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 350px;
 }
 
-#loginWrapper[style*="display: none"] {
-    display: none !important; /* ログイン成功後に loginWrapper を完全に非表示にする */
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 1.5em;
+  color: var(--text-color);
+}
+
+/* サイドバー */
+.sidebar {
+  width: 200px;
+  background-color: var(--secondary-color);
+  padding: 20px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.left-sidebar,
+.right-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+}
+
+.left-sidebar {
+  order: 1;
+  border-right: 1px solid var(--secondary-hover-color);
+  padding-right: 1em;
+}
+
+.right-sidebar {
+  order: 3;
+  border-left: 1px solid var(--secondary-hover-color);
+  padding-left: 1em;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  margin-bottom: 1em;
+  color: var(--text-secondary-color);
+}
+
+/* 過去のチャット履歴 */
+.chat-history {
+  margin-bottom: 1.5em;
+  font-size: 12px;
+}
+
+.chat-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em;
+  cursor: pointer;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.chat-history-item:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+.chat-history-item.active {
+  background-color: var(--focus-color);
+  font-weight: bold;
 }
 
 .chat-history-delete-btn {
-    background: transparent;
-    border: none;
-    font-size: 16px;
-    color: #e55865;
-    cursor: pointer;
-    margin-left: 8px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #e55865;
+  cursor: pointer;
+  margin-left: 8px;
 }
 
+/* メインコンテンツ */
+.main-content {
+  flex-grow: 1; /* 残りのスペースを占める */
+  order: 2;
+  display: flex;
+  flex-direction: column; /* chats と prompt を縦に並べる */
+  align-items: center;    /* 水平方向中央揃え */
+}
+
+/* チャット表示部分 */
+.chats {
+  align-items: flex-start;
+	width: 90%;
+	min-width: 300px;
+}
+
+.chats-wrapper {
+  padding: 1em 1em;
+  padding-bottom: 100px;
+  max-height: calc(100vh - 6em); /* サイドバーと prompt を考慮した高さ */
+  overflow-y: auto;
+  scrollbar-color: #999 transparent;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 14px;
+}
+
+.chats .message--incoming {
+  margin-top: 1.5em;
+}
+
+.chats .message--outgoing:not(:first-child) {
+  margin-top: 40px;
+}
+
+.chats .message__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5em;
+}
+
+.chats .message__text {
+  color: var(--text-color);
+  white-space: normal;
+  margin-top: 10px;
+}
+
+.chats .message--outgoing .message__text {
+  padding: 1em 1em;
+  border-radius: 30px;
+  background: var(--secondary-color);
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+.chats .message--outgoing .message__text p {
+  margin: 0;
+}
+
+.chats .message--error .message__text {
+  color: #e55865;
+}
+
+.chats .message--loading .message__text {
+  display: none;
+}
+
+.chats .message__avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  object-fit: top center;
+}
+
+/* ローディングインジケータ */
+.chats .message__loading-indicator {
+  display: none;
+  gap: 0.6em;
+  width: 100%;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.chats .message--loading .message__loading-indicator {
+  display: flex;
+}
+
+.chats .message__loading-indicator .message__loading-bar {
+  height: 1em;
+  width: 100%;
+  border-radius: 0.135em;
+  background-position: -800px 0;
+  background: linear-gradient(to right, #2563eb60 30%, var(--primary-color) 60%, #2563eb60);
+  animation: loading 3s linear infinite;
+}
+
+.chats .message__loading-indicator .message__loading-bar:first-child {
+  width: 85%;
+}
+
+.chats .message__loading-indicator .message__loading-bar:last-child {
+  width: 70%;
+}
+
+@keyframes loading {
+  0% {
+    background-position: -800px 0;
+  }
+  50% {
+    background-position: 0px 0;
+  }
+  100% {
+    background-position: 800px 0;
+  }
+}
+
+/* メッセージ削除ボタン */
+.message__delete-button {
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  margin-left: 0.5em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.message:hover .message__delete-button {
+  opacity: 1;
+}
+
+.message__delete-button:hover {
+  color: var(--text-color);
+}
+
+/************************************
+ * 5. フォームやボタンなどのパーツ
+ ************************************/
+
+/* フォームグループ */
+.form-group {
+  margin-bottom: 1em;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5em;
+  color: var(--text-secondary-color);
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 0.75em;
+  border: 1px solid var(--secondary-hover-color);
+  border-radius: 5px;
+  color: var(--text-color);
+}
+
+/* フォームボタン */
+.form-buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.form-buttons button {
+  padding: 0.75em 1em;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.form-buttons button:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+.error-message {
+  color: #e55865;
+  margin-top: 0.5em;
+}
+
+.success-message {
+  color: green;
+  margin-top: 0.5em;
+}
+
+/* モデルセレクター */
+.model-selector label {
+  display: block;
+  margin-bottom: 0.5em;
+  color: var(--text-secondary-color);
+}
+
+#modelSelect {
+  width: 100%;
+  padding: 0.75em;
+  border: 1px solid var(--secondary-hover-color);
+  border-radius: 5px;
+  color: var(--text-color);
+  background-color: var(--primary-color);
+  margin-bottom: 1.5em;
+}
+
+/* グラウンディングスイッチ */
+.grounding-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5em;
+}
+
+.grounding-switch label {
+  color: var(--text-secondary-color);
+}
+
+/* スイッチパーツ */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.2s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* New Chat ボタン */
+#newChatButton {
+  padding: 0.75em 1em;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+}
+
+#newChatButton:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+/************************************
+ * 6. Prompt（送信フォーム）周辺
+ ************************************/
+.prompt {
+  position: fixed;
+  bottom: 0;
+  left: 200px;   /* 左サイドバーの幅と同じ */
+  right: 200px;  /* 右サイドバーの幅と同じ */
+  background: transparent;
+  z-index: 500;
+  padding: 1em;
+}
+
+.prompt__input-wrapper {
+  width: 100%;
+  min-height: 1em;
+  max-height: 40em;
+  display: flex;
+  position: relative;
+  color: var(--text-color);
+  padding: 1em;
+  border-radius: 30px;
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-hover-color);
+  align-items: flex-start; /* textareaの高さに合わせる */
+}
+
+.prompt__form{
+  margin: 0 auto;
+  width: 90%;
+	min-width: 300px;
+}
+
+.prompt__form-input {
+  font-size: 14px;
+  height: auto;
+  width: 100%;
+  border: none;
+  resize: none;
+  margin-bottom: 2em;
+  background: var(--secondary-color);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-height: 36em;
+}
+
+.prompt__form-input::placeholder {
+  color: var(--placeholder-color);
+}
+
+/* ボタン */
+.prompt__form-button {
+  position: absolute;
+  right: 0.5em;
+  top: calc(100% - 20px);
+  border: none;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 1.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color);
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+/* 送信ボタン */
+.prompt__form-button#sendButton {
+  transform: translateY(-50%) scale(0);
+}
+
+/* 停止ボタン */
+.prompt__form-button#stopButton {
+  transform: translateY(-50%) scale(1);
+}
+
+.prompt__form-input:valid ~ .prompt__form-button#sendButton {
+  transform: translateY(-50%) scale(1);
+}
+
+/* 削除ボタンの位置調整 */
+.prompt__form-input:valid ~ #deleteButton {
+  right: 3.5em;
+}
+
+/* ファイル添付ボタン */
+#attachButton {
+  transform: translateY(-50%) scale(1);
+  right: 3.5em;
+}
+
+.prompt__form-input:valid ~ #attachButton {
+  right: 3.5em;
+}
+
+/* ディスクレーマ */
+.prompt__disclaim {
+  text-align: center;
+  color: var(--placeholder-color);
+  font-size: 0.85em;
+  margin-top: 1em;
+}
+
+/************************************
+ * 7. ユーティリティクラス
+ ************************************/
+.hide {
+  display: none !important;
+}
+
+/* main-content が非表示の間、prompt や sidebar を非表示に */
+#appContainer[style*="display: none"] #mainContent,
+#appContainer[style*="display: none"] .sidebar {
+  display: none;
+}
+
+#loginWrapper[style*="display: none"] {
+  display: none !important;
+}
+
+/* ファイル添付プレビュー */
 .attachment-item {
   position: relative;
   display: inline-block;
@@ -822,11 +796,43 @@ code {
   position: absolute;
   top: 0;
   right: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   border: none;
   color: #fff;
   font-size: 18px;
   cursor: pointer;
   padding: 0 5px;
   border-radius: 50%;
+}
+
+/* ヘッダーを隠す */
+body.hide-header .header {
+  margin: 0;
+  display: none;
+}
+
+/* アイコン（例：.message__icon など） */
+.chats .message__icon {
+  color: var(--text-color);
+  cursor: pointer;
+  height: 35px;
+  width: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  font-size: 1.25em;
+  margin-left: 3.5em;
+  transition: background 0.3s ease;
+}
+
+.chats .message__icon:hover {
+  background: var(--secondary-hover-color);
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
 }
