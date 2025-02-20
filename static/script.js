@@ -16,6 +16,7 @@ const rightSidebar = document.getElementById('rightSidebar');
 const chatHistoryList = document.getElementById('chatHistoryList');
 const newChatButton = document.getElementById('newChatButton');
 const chatsContainer = document.getElementById('chats');
+const chatsWrapper= document.getElementById('chatsWrapper')
 const promptForm = document.querySelector('.prompt__form');
 const promptInput = document.getElementById('promptInput');
 const sendButton = document.getElementById('sendButton');
@@ -488,7 +489,6 @@ function displayOutgoingMessage(message) {
   const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');
   messageElement.querySelector('.message__text').innerText = message;
   chatsContainer.appendChild(messageElement);
-  scrollToBottom();
 }
 
 function displayIncomingMessage(message, index) {
@@ -591,7 +591,7 @@ function displayLoadingIndicator() {
   `;
   const loadingMessageElement = createChatMessageElement(loadingHtml, 'model', 'message--incoming', 'message--loading');
   chatsContainer.appendChild(loadingMessageElement);
-  // scrollToBottom();
+  scrollToBottom();
 }
 
 function removeLoadingIndicator() {
@@ -638,7 +638,7 @@ const createChatMessageElement = (htmlContent, role, ...cssClasses) => {
 
 const scrollToBottom = () => {
   setTimeout(() => {
-    chatsContainer.scrollTop = chatsContainer.scrollHeight;
+    chatsWrapper.scrollTop = chatsWrapper.scrollHeight;
     }, 0);
 };
 

@@ -276,52 +276,36 @@ def handle_message(data):
             if chunk.text:
                 full_response += chunk.text
                 emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
-        formatted_metadata = '\n---\n\n' + model_name + '    Token : ' + str(usage_metadata.total_token_count) + '\n'
+        formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + str(usage_metadata.total_token_count) + '\n\n'
         full_response += formatted_metadata
         emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-
+        formatted_metadata = ''
         # グラウンディング処理（応答がキャンセルされていない場合のみ実施）
         if grounding_enabled and not cancellation_flags.get(sid):
-            all_grounding_chunks = []
-            all_web_search_queries = []
-
-            # response_chunks から metadata を収集
+            all_grounding_links = ''
+            all_grounding_queries = ''
             for chunk in response_chunks:
                 if hasattr(chunk, 'candidates') and chunk.candidates:
                     candidate = chunk.candidates[0]
                     if hasattr(candidate, 'grounding_metadata') and candidate.grounding_metadata:
                         metadata = candidate.grounding_metadata
-
-                        # grounding_chunks を収集
                         if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
-                            all_grounding_chunks.extend(metadata.grounding_chunks)
-
-                        # web_search_queries を収集
+                            for i, grounding_chunk in enumerate(metadata.grounding_chunks):
+                                if hasattr(grounding_chunk, 'web') and grounding_chunk.web:
+                                    all_grounding_links += f'[{i + 1}][{grounding_chunk.web.title}]({grounding_chunk.web.uri}) '
                         if hasattr(metadata, 'web_search_queries') and metadata.web_search_queries:
-                            all_web_search_queries.extend(metadata.web_search_queries)
-
-            # リンクや検索クエリをまとめて処理
-            all_grounding_links = ''
-            for i, grounding_chunk in enumerate(all_grounding_chunks, start=1):
-                if hasattr(grounding_chunk, 'web') and grounding_chunk.web:
-                    title = grounding_chunk.web.title
-                    uri = grounding_chunk.web.uri
-                    # 同じリンクの重複処理などを行いたい場合は set などで管理してもよい
-                    all_grounding_links += f'[{i}][{title}]({uri}) '
-
-            # クエリの重複除去 & ソート
-            all_grounding_queries = sorted(set(all_web_search_queries))
-            formatted_metadata = ''
-            if all_grounding_links or all_grounding_queries:
-                formatted_metadata = '\n'
-                if all_grounding_links:
-                    formatted_metadata += all_grounding_links + '\n'
-                if all_grounding_queries:
-                    formatted_metadata += f'\nQuery : {" / ".join(all_grounding_queries)}\n'
-
+                            for query in metadata.web_search_queries:
+                                all_grounding_queries += f'{query} / '
+            if all_grounding_queries:
+                all_grounding_queries = ' / '.join(
+                    sorted(set(all_grounding_queries.rstrip(' /').split(' / ')))
+                )
+            if all_grounding_links:
+                formatted_metadata += all_grounding_links + '\n'
+            if all_grounding_queries:
+                formatted_metadata += '\nQuery: ' + all_grounding_queries + '\n'
             full_response += formatted_metadata
             emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-
         # 応答が途中でキャンセルされていた場合は、保存せずに終了
         if cancellation_flags.get(sid):
             return
