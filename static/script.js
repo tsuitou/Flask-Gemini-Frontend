@@ -799,8 +799,8 @@ function handleFile(file) {
                 const previewHTML = `
 									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
-										<i class='bx bx-file'></i>
                     <button class="attachment-delete-btn">×</button>
+										<img src="${FILE_IMG_URL}" alt="${fileName}" style="max-width:100%; height:auto;">
 										<p>${fileName}</p>
                   </div>
                 `;
@@ -835,16 +835,16 @@ function handleFile(file) {
                 previewHTML = `
 									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
-                    <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
                     <button class="attachment-delete-btn">×</button>
+                    <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
                   </div>
                 `;
             } else {
                 previewHTML = `
 									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
-										<i class='bx bx-file'></i>
                     <button class="attachment-delete-btn">×</button>
+										<img src="${FILE_IMG_URL}" alt="${fileName}" style="max-width:100%; height:auto;">
 										<p>${fileName}</p>
                   </div>
                 `;

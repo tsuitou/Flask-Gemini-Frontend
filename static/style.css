@@ -792,9 +792,10 @@ input:checked + .slider:before {
 
 /* ファイル添付プレビュー */
 .attachment-item {
-  font-size: 20px;
+  font-size: 12px;
   position: relative;
-  display: flex;
+
+	flex-direction: column
 	overflow-y: none;
   margin-bottom: 1em;
   white-space: normal;
@@ -802,9 +803,6 @@ input:checked + .slider:before {
   overflow-wrap: break-word;
 }
 
-.attachment-item p {
-  font-size: 12px;
-}
 
 .attachment-delete-btn {
   position: absolute;
