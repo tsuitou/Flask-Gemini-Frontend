@@ -735,7 +735,21 @@ dragOverlay.addEventListener('transitionend', () => {
   }
 });
 
+function countToken() {
+		const data = {
+			model_name: currentModel,
+			file_data: fileData,
+			file_name: fileName,
+			file_mime_type: fileMimeType,
+		};
+		socket.emit('count_token', data);
+		return;
+}
 
+socket.on('total_tokens', (total_tokens) => {
+  const tokenCountDisplay = document.getElementById('tokenCountDisplay');
+  tokenCountDisplay.textContent = `token: ${total_tokens.total_tokens}`;
+});
 
 function handleFile(file) {
     // 20MB 超えるかどうかのチェック
@@ -781,13 +795,13 @@ function handleFile(file) {
                 // 拡張子を .txt に差し替え
                 fileName = file.name.replace(/\.(xlsx|xlsm)$/i, '.txt');
                 fileMimeType = 'text/plain';
-
                 // プレビュー表記
                 const previewHTML = `
+									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
-                    <p>添付ファイル</p>
-										<p>${fileName}</p>
+										<i class='bx bx-file'></i>
                     <button class="attachment-delete-btn">×</button>
+										<p>${fileName}</p>
                   </div>
                 `;
                 attachmentPreview.innerHTML = previewHTML;
@@ -815,11 +829,11 @@ function handleFile(file) {
         const reader = new FileReader();
         reader.onload = (event) => {
             fileData = event.target.result.split(',')[1];
-
             let previewHTML = '';
             if (fileMimeType.startsWith('image/')) {
                 // 画像プレビュー
                 previewHTML = `
+									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
                     <img src="${event.target.result}" alt="${fileName}" style="max-width:100%; height:auto;">
                     <button class="attachment-delete-btn">×</button>
@@ -827,10 +841,11 @@ function handleFile(file) {
                 `;
             } else {
                 previewHTML = `
+									<div id="tokenCountDisplay"></div>
                   <div class="attachment-item">
-                    <p>添付ファイル</p>
-										<p>${fileName}</p>
+										<i class='bx bx-file'></i>
                     <button class="attachment-delete-btn">×</button>
+										<p>${fileName}</p>
                   </div>
                 `;
             }

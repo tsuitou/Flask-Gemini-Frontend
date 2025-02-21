@@ -30,6 +30,7 @@ google_search_tool = Tool(
     google_search=GoogleSearch()
 )
 MODELS = os.environ.get('MODELS', '').split(',')
+SYSTEM_INSTRUCTION = os.environ.get('SYSTEM_INSTRUCTION')
 
 # 拡張子 → MIME の対応表
 EXTENSION_TO_MIME = {
@@ -193,6 +194,23 @@ def handle_login(data):
     else:
         emit('login_response', {'status': 'error', 'message': 'ログイン失敗'})
 
+@socketio.on('count_token')
+def handle_count_token(data):
+    model_name = data.get('model_name')
+    file_data_base64 = data.get('file_data')
+    file_name = data.get('file_name')
+    file_mime_type = data.get('file_mime_type')
+
+    if file_mime_type in EXTENSION_TO_MIME.values():
+        file_data = base64.b64decode(file_data_base64)
+        file_part = types.Part.from_bytes(data=file_data, mime_type=file_mime_type)
+        content = [file_part]
+        
+        response = client.models.count_tokens(model=model_name, contents=content,)
+        token = f"{response.total_tokens:,}"
+        emit('total_tokens', {'total_tokens': token})
+
+
 @socketio.on('get_model_list')
 def handle_get_model_list():
     api_models = client.models.list()
@@ -252,8 +270,13 @@ def handle_message(data):
         configs = None
         if grounding_enabled:
             configs = GenerateContentConfig(
+                system_instruction= SYSTEM_INSTRUCTION,
                 tools=[google_search_tool],
                 response_modalities=["TEXT"]
+            )
+        else:
+            configs = GenerateContentConfig(
+                system_instruction= SYSTEM_INSTRUCTION,
             )
 
         # ストリーミング応答の開始
