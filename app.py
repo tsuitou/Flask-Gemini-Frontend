@@ -346,7 +346,7 @@ def handle_message(data):
         chat_title = message[:29]
         past_chats[chat_id] = chat_title
         save_past_chats(user_dir, past_chats)
-        emit('history_list', {'history': past_chats}, broadcast=True)
+        emit('history_list', {'history': past_chats})
 
     # ユーザーのプロンプトを履歴に追加
     messages.append({
@@ -523,4 +523,4 @@ if __name__ == '__main__':
     init_db()
 
     # geventベースでサーバ起動（geventインストール済みの場合に自動で使用）
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host="0.0.0.0", port=5000)
