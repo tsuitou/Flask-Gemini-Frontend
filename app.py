@@ -18,7 +18,7 @@ from google.genai import types
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 from dotenv import load_dotenv
 from pathlib import Path
-
+from filelock import FileLock
 
 # -----------------------------------------------------------
 # 1) Flask + SocketIO の初期化
@@ -209,15 +209,22 @@ def get_user_dir(username):
 # -----------------------------------------------------------
 def load_past_chats(user_dir):
     past_chats_file = os.path.join(user_dir, 'past_chats_list')
-    try:
-        past_chats = joblib.load(past_chats_file)
-    except Exception:
-        past_chats = {}
+    lock_file = past_chats_file + '.lock'  # ロック用ファイル(.lock)
+
+    # withブロックを抜けるまでロックが保持される
+    with FileLock(lock_file):
+        try:
+            past_chats = joblib.load(past_chats_file)
+        except Exception:
+            past_chats = {}
     return past_chats
 
 def save_past_chats(user_dir, past_chats):
     past_chats_file = os.path.join(user_dir, 'past_chats_list')
-    joblib.dump(past_chats, past_chats_file)
+    lock_file = past_chats_file + '.lock'
+
+    with FileLock(lock_file):
+        joblib.dump(past_chats, past_chats_file)
 
 def load_chat_messages(user_dir, chat_id):
     messages_file = os.path.join(user_dir, f'{chat_id}-st_messages')
@@ -390,11 +397,12 @@ def handle_message(data):
                 emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
 
         # トークン数情報を整形
-        if usage_metadata:
-            formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
-            full_response += formatted_metadata
-            emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-            formatted_metadata = ''
+        if not cancellation_flags.get(sid):
+            if usage_metadata:
+                formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
+                full_response += formatted_metadata
+                emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
+                formatted_metadata = ''
 
         # グラウンディング処理
         if grounding_enabled and not cancellation_flags.get(sid):
@@ -438,6 +446,14 @@ def handle_message(data):
     finally:
         # 応答処理終了後にキャンセルフラグを削除
         cancellation_flags.pop(sid, None)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """クライアント切断時のクリーンアップ"""
+    sid = request.sid
+    # もしキャンセルフラグが残っていれば削除
+    cancellation_flags.pop(sid, None)
+    print(f"[disconnect] sid={sid} cleaned up.")
 
 @socketio.on('delete_message')
 def handle_delete_message(data):

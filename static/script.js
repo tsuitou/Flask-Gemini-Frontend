@@ -457,12 +457,27 @@ function toggleResponseButtons(isResponding) {
   }
 }
 
+function handleKeyDown(event) {
+  if (event.key === 'Tab') {
+    event.preventDefault(); // デフォルトのTabキーの動作をキャンセル
+
+    const start = promptInput.selectionStart;
+    const end = promptInput.selectionEnd;
+
+    // Tab文字を挿入
+    promptInput.value = promptInput.value.substring(0, start) + "\t" + promptInput.value.substring(end);
+
+    // カーソル位置を更新
+    promptInput.selectionStart = promptInput.selectionEnd = start + 1;
+  }
+}
+
 promptForm.addEventListener('submit', handleSendMessage);
 
 function handleSendMessage(e) {
   e.preventDefault();
   if (isGeneratingResponse) return;
-  const message = promptInput.value.trim();
+  const message = promptInput.value;
   if (!message && !fileData) return;
   
   // 応答中フラグをセットし、入力欄を無効化

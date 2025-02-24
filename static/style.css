@@ -418,6 +418,7 @@ code {
   padding: 1em 1em;
   border-radius: 30px;
   background: var(--secondary-color);
+  white-space: pre;
   word-break: break-all;
   overflow-wrap: break-word;
 }
