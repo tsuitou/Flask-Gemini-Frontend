@@ -418,7 +418,7 @@ code {
   padding: 1em 1em;
   border-radius: 30px;
   background: var(--secondary-color);
-  white-space: pre;
+  white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: break-word;
 }
@@ -485,13 +485,35 @@ code {
   }
 }
 
+.button__icons {
+	display: flex;
+}
+
+/* message__icon (コピーボタン) のスタイル */
+.message__copy-button {
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  margin-left: 2em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.message:hover .message__copy-button {
+  opacity: 1;
+}
+
+.message__copy-button:hover {
+  color: var(--text-color);
+}
 /* メッセージ削除ボタン */
 .message__delete-button {
   background-color: transparent;
   border: none;
   color: var(--text-secondary-color);
   cursor: pointer;
-  margin-left: 0.5em;
+  margin-left: 2em;
   opacity: 0;
   transition: opacity 0.3s ease;
 }

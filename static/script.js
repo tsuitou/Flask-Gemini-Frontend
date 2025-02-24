@@ -338,8 +338,10 @@ function displayMessages(messages) {
          <img class="message__avatar" src="${ message.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL }" alt="${message.role} avatar">
          <p class="message__text"></p>
        </div>
-       <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
-       <span onClick="copyMessageToClipboard(this)" class="message__icon hide"><i class='bx bx-copy-alt'></i></span>`,
+			 <div class="button__icons">
+				 <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
+				 <button onClick="copyMessageToClipboard(this)" class="message__copy-button"><i class='bx bx-copy-alt'></i></button>
+			 </div>`,
       message.role, message.role === 'user' ? 'message--outgoing' : 'message--incoming'
     );
 		const textElement = messageElement.querySelector('.message__text');
@@ -361,12 +363,14 @@ function createMessageNode(msg, index) {
       <img class="message__avatar" src="${avatarURL}" alt="${msg.role} avatar">
       <p class="message__text"></p>
     </div>
-    <button class="message__delete-button" onclick="deleteChatMessage(${index})">
-      <i class='bx bx-trash'></i>
-    </button>
-    <span onClick="copyMessageToClipboard(this)" class="message__icon hide">
-      <i class='bx bx-copy-alt'></i>
-    </span>
+		<div class="button__icons">
+			<button class="message__delete-button" onclick="deleteChatMessage(${index})">
+				<i class='bx bx-trash'></i>
+			</button>
+			<button onClick="copyMessageToClipboard(this)" class="message__copy-button">
+				<i class='bx bx-copy-alt'></i>
+			</button>
+		</div>
   `;
   const node = createChatMessageElement(htmlContent, msg.role, messageClass);
   // 現在のメッセージ内容をデータ属性として保持
@@ -516,12 +520,14 @@ function displayOutgoingMessage(message) {
       <img class="message__avatar" src="${PROFILE_IMG_URL}" alt="User avatar">
       <p class="message__text"></p>
     </div>
-    <button class="message__delete-button" onclick="deleteChatMessage(${chatsContainer.children.length})">
-      <i class='bx bx-trash'></i>
-    </button>
-    <span onClick="copyMessageToClipboard(this)" class="message__icon hide">
-      <i class='bx bx-copy-alt'></i>
-    </span>
+		<div class="button__icons">
+			<button class="message__delete-button" onclick="deleteChatMessage(${chatsContainer.children.length})">
+				<i class='bx bx-trash'></i>
+			</button>
+			<button onClick="copyMessageToClipboard(this)" class="message__copy-button">
+				<i class='bx bx-copy-alt'></i>
+			</button>
+		</div>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');
   messageElement.querySelector('.message__text').innerText = message;
@@ -680,10 +686,10 @@ const scrollToBottom = () => {
 };
 
 const copyMessageToClipboard = (copyButton) => {
-  const messageContent = copyButton.parentElement.querySelector('.message__text').innerText;
+  const messageContent = copyButton.parentElement.parentElement.querySelector('.message__text').innerText;
   navigator.clipboard.writeText(messageContent);
   copyButton.innerHTML = `<i class='bx bx-check'></i>`;
-  setTimeout(() => (copyButton.innerHTML = `<i class='bx bx-copy-alt'></i>`), 1000);
+  setTimeout(() => (copyButton.innerHTML = `<i class='bx bx-copy-alt'></i>`), 2000);
 };
 
 const addCopyButtonToCodeBlocks = () => {
