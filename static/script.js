@@ -49,43 +49,59 @@ const md = window.markdownit({
 // 認証 (ログイン/登録)
 // ----------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-  const storedUsername = localStorage.getItem('username');
-  const loginContainer = document.getElementById('loginContainer');
-  const appContainer = document.getElementById('appContainer');
-
-  if (storedUsername) {
-    // ログイン状態の場合：ログインフォームを削除してアプリを表示
-    loginContainer.innerHTML = '';  // または loginContainer.remove();
-    appContainer.style.display = 'flex';
-    initializeApp(); // アプリ初期化処理
+  const storedToken = localStorage.getItem('autoLoginToken');
+  if (storedToken) {
+    // 自動ログインを試みる
+    socket.emit('auto_login', { token: storedToken });
   } else {
-    // ログイン状態でない場合：ログインフォームを動的に生成して表示
-    loginContainer.innerHTML = `
-    <div class="login-wrapper" id="loginWrapper">
-        <div class="login-form">
-            <h2>ログイン / 新規登録</h2>
-            <div class="form-group">
-                <label for="username">ユーザー名:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">パスワード:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="form-buttons">
-                <button id="loginButton">ログイン</button>
-                <button id="registerButton">新規登録</button>
-            </div>
-            <div id="authError" class="error-message"></div>
-            <div id="authSuccess" class="success-message"></div>
-        </div>
-    </div>
-    `;
-    appContainer.style.display = 'none';
-    // ログイン用のイベントハンドラを設定
-    setupLoginHandlers();
+    // 通常のログインフォーム表示
+    showLoginForm();
   }
 });
+
+// 自動ログイン用のサーバレスポンス
+socket.on('auto_login_response', (data) => {
+  if (data.status === 'success') {
+    // 成功：アプリ表示
+    localStorage.setItem('autoLoginToken', data.auto_login_token); // 再発行があれば更新
+    localStorage.setItem('username', data.username);
+    const loginContainer = document.getElementById('loginContainer');
+    if (loginContainer) loginContainer.innerHTML = '';
+    const appContainer = document.getElementById('appContainer');
+    if (appContainer) appContainer.style.display = 'flex';
+
+    initializeApp();
+  } else {
+    // 失敗：通常のログインフォームを表示
+    showLoginForm();
+  }
+});
+
+function showLoginForm() {
+	loginContainer.innerHTML = `
+	<div class="login-wrapper" id="loginWrapper">
+			<div class="login-form">
+					<h2>ログイン / 新規登録</h2>
+					<div class="form-group">
+							<label for="username">ユーザー名:</label>
+							<input type="text" id="username" name="username" required>
+					</div>
+					<div class="form-group">
+							<label for="password">パスワード:</label>
+							<input type="password" id="password" name="password" required>
+					</div>
+					<div class="form-buttons">
+							<button id="loginButton">ログイン</button>
+							<button id="registerButton">新規登録</button>
+					</div>
+					<div id="authError" class="error-message"></div>
+					<div id="authSuccess" class="success-message"></div>
+			</div>
+	</div>
+	`;
+	appContainer.style.display = 'none';
+	setupLoginHandlers();
+}
 
 // ログイン用のイベントハンドラ設定例
 function setupLoginHandlers() {
@@ -111,22 +127,28 @@ function setupLoginHandlers() {
   });
 }
 
-// SocketIO でログインレスポンスを受け取った後の処理
 socket.on('login_response', (response) => {
-  // ログインフォームが存在する場合のみ取得
   const authSuccess = document.getElementById('authSuccess');
   const authError = document.getElementById('authError');
   
   if (response.status === 'success') {
     if (authSuccess) authSuccess.textContent = 'ログイン成功';
     if (authError) authError.textContent = '';
-    // ログイン状態を保持
+
+    // 従来は localStorage に username を直接保存していたところを、
+    // 今回はトークンを保存する
+    localStorage.setItem('autoLoginToken', response.auto_login_token);
+
+    // さらにUI用に username も保存したいなら
     localStorage.setItem('username', response.username);
+
+    // 以下は従来通り
     const loginContainer = document.getElementById('loginContainer');
     if (loginContainer) loginContainer.innerHTML = '';
     const appContainer = document.getElementById('appContainer');
     if (appContainer) appContainer.style.display = 'flex';
-    initializeApp(); // アプリ初期化処理
+
+    initializeApp();
   } else {
     if (authError) authError.textContent = response.message;
     if (authSuccess) authSuccess.textContent = '';

@@ -1,11 +1,17 @@
+# gevent を使う場合のモンキーパッチ（WSGIサーバを gevent にするため）
+from gevent import monkey
+monkey.patch_all()
+
 import os
 import json
 import bcrypt
+import hashlib
 import re
 import base64
 import time
+import sqlite3
 import joblib
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 from google import genai
 from google.genai import types 
@@ -13,11 +19,12 @@ from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 from dotenv import load_dotenv
 from pathlib import Path
 
-cancellation_flags = {}
 
+# -----------------------------------------------------------
+# 1) Flask + SocketIO の初期化
+# -----------------------------------------------------------
 app = Flask(__name__)
-# 必要に応じて cors_allowed_origins を設定
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
 
 # 環境変数の読み込み
 load_dotenv()
@@ -31,8 +38,151 @@ google_search_tool = Tool(
 )
 MODELS = os.environ.get('MODELS', '').split(',')
 SYSTEM_INSTRUCTION = os.environ.get('SYSTEM_INSTRUCTION')
+VERSION = os.environ.get('VERSION')
 
-# 拡張子 → MIME の対応表
+# -----------------------------------------------------------
+# 2) SQLite 用の初期設定
+# -----------------------------------------------------------
+DB_FILE = 'data/database.db'
+os.makedirs('data/', exist_ok=True)  # data/ フォルダがなければ作成
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS accounts (
+        username TEXT PRIMARY KEY,
+        password TEXT,
+        auto_login_token TEXT
+    )
+    ''')
+    conn.commit()
+    conn.close()
+
+def generate_auto_login_token(username: str, version_salt: str):
+    raw = (username + version_salt).encode('utf-8')
+    return hashlib.sha256(raw).hexdigest()
+
+def hash_password(password):
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password, hashed):
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+def register_user(username, password):
+    """新規ユーザー登録"""
+    if username == '' or password == '':
+        return {'status': 'error', 'message': 'ユーザー名かパスワードが空欄です'}
+    # 英数字以外の文字がないかチェック
+    if any(not re.match(r'^[a-zA-Z0-9]*$', field) for field in (username, password)):
+        return {'status': 'error', 'message': '英数字以外の文字が含まれています。'}
+
+    # すでに同名ユーザーが存在するかチェック
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT username FROM accounts WHERE username=?', (username,))
+    existing = c.fetchone()
+    if existing:
+        conn.close()
+        return {'status': 'error', 'message': '既存のユーザー名です。'}
+
+    # 挿入
+    hashed_pw = hash_password(password)
+    c.execute('INSERT INTO accounts (username, password) VALUES (?, ?)', (username, hashed_pw))
+    conn.commit()
+    conn.close()
+    return {'status': 'success', 'message': '登録完了'}
+
+def authenticate(username, password):
+    """ユーザー認証"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT password FROM accounts WHERE username=?', (username,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        hashed_pw = row[0]
+        return verify_password(password, hashed_pw)
+    return False
+
+# ------------------------
+# 認証 (SQLite)
+# ------------------------
+@socketio.on('register')
+def handle_register(data):
+    username = data.get('username')
+    password = data.get('password')
+    result = register_user(username, password)
+    emit('register_response', result)
+
+@socketio.on('login')
+def handle_login(data):
+    username = data.get('username')
+    password = data.get('password')
+    if authenticate(username, password):
+        # 認証成功
+        # ここでauto_login_tokenを生成してDBに保存し、クライアントに返す
+        version_salt = VERSION  # 適宜、環境変数 or DBで管理してもOK
+        auto_login_token = generate_auto_login_token(username, version_salt)
+        print(auto_login_token)
+        # DBに保存
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('UPDATE accounts SET auto_login_token=? WHERE username=?', (auto_login_token, username))
+        conn.commit()
+        conn.close()
+
+        # クライアントには username ではなく auto_login_token を返す
+        emit('login_response', {
+            'status': 'success',
+            'username': username,  # UI表示用にユーザー名も返すことは可能
+            'auto_login_token': auto_login_token
+        })
+    else:
+        emit('login_response', {'status': 'error', 'message': 'ログイン失敗'})
+
+@socketio.on('auto_login')
+def handle_auto_login(data):
+    token = data.get('token', '')
+
+    # 1) まず、DBから「auto_login_token == token」なユーザを探す
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT username, auto_login_token FROM accounts WHERE auto_login_token = ?', (token,))
+    row = c.fetchone()
+    conn.close()
+
+    if row:
+        username, stored_token = row
+        # 2) 現在のVERSIONで再ハッシュしたトークンを計算
+        new_hash = generate_auto_login_token(username, VERSION)  # username + "v2" をSHA256など
+
+        # 3) DBに保存されているトークンと合うか確認
+        if new_hash == stored_token:
+            # 一致 => 自動ログイン成功
+            emit('auto_login_response', {
+                'status': 'success',
+                'username': username,
+                'auto_login_token': stored_token
+            })
+        else:
+            # 不一致 => バージョンが変わって旧トークンが合わなくなった or 改ざん
+            emit('auto_login_response', {
+                'status': 'error',
+                'message': '自動ログイン失敗（バージョン不一致）'
+            })
+    else:
+        # 該当なし => そもそもトークンが無効
+        emit('auto_login_response', {
+            'status': 'error',
+            'message': '自動ログイン失敗（トークン無効）'
+        })
+
+# -----------------------------------------------------------
+# 3) チャット用の定数や共通変数
+# -----------------------------------------------------------
+cancellation_flags = {}
+
 EXTENSION_TO_MIME = {
     'pdf': 'application/pdf', 'js': 'application/x-javascript',
     'py': 'text/x-python', 'css': 'text/css', 'md': 'text/md',
@@ -47,67 +197,16 @@ EXTENSION_TO_MIME = {
     'flac': 'audio/flac',
 }
 
-# data/ フォルダがなければ作成
-os.makedirs('data/', exist_ok=True)
-ACCOUNT_FILE = 'data/accounts.json'
 USER_DIR = 'data/'  # ユーザーデータ保存ディレクトリ
 
-# ----------------------------------------
-# 認証機能
-# ----------------------------------------
-def load_accounts():
-    if os.path.exists(ACCOUNT_FILE):
-        with open(ACCOUNT_FILE, "r") as f:
-            try:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-            except json.JSONDecodeError:
-                return {}
-    return {}
-
-def save_accounts(accounts):
-    with open(ACCOUNT_FILE, 'w') as f:
-        json.dump(accounts, f, indent=4)
-
-def hash_password(password):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-def verify_password(password, hashed):
-    return bcrypt.checkpw(password.encode(), hashed.encode())
-
-def register_user(username, password):
-    if username == '' or password == '':
-        return {'status': 'error', 'message': 'ユーザー名かパスワードが空欄です'}
-    if any(not re.match(r'^[a-zA-Z0-9]*$', field) for field in (username, password)):
-        return {'status': 'error', 'message': '英数字以外の文字が含まれています。'}
-    accounts = load_accounts()
-    if username in accounts:
-        return {'status': 'error', 'message': '既存のユーザー名です。'}
-    accounts[username] = hash_password(password)
-    save_accounts(accounts)
-    return {'status': 'success', 'message': '登録完了'}
-
-def authenticate(username, password):
-    accounts = load_accounts()
-    if username in accounts and verify_password(password, accounts[username]):
-        return True
-    return False
-
-@socketio.on('set_username')
-def handle_set_username(data):
-    username = data.get('username')
-    print("Received username from client:", username)
-    # 必要ならば、Flask のセッションに保存するなどの処理を実施
-
-# ----------------------------------------
-# チャット履歴管理
-# ----------------------------------------
 def get_user_dir(username):
     user_dir = os.path.join(USER_DIR, username)
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
 
+# -----------------------------------------------------------
+# 4) チャット履歴管理 (従来どおりファイルに保存)
+# -----------------------------------------------------------
 def load_past_chats(user_dir):
     past_chats_file = os.path.join(user_dir, 'past_chats_list')
     try:
@@ -171,34 +270,26 @@ def find_gemini_index(messages, target_user_messages, include_model_responses=Tr
                     return idx + 1
     return len(messages)
 
-# ----------------------------------------
-# Flask ルートと SocketIO イベント
-# ----------------------------------------
+# -----------------------------------------------------------
+# 5) Flask ルートと SocketIO イベント
+# -----------------------------------------------------------
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@socketio.on('register')
-def handle_register(data):
+@socketio.on('set_username')
+def handle_set_username(data):
     username = data.get('username')
-    password = data.get('password')
-    result = register_user(username, password)
-    emit('register_response', result)
+    print("Received username from client:", username)
+    # 必要ならば、Flask のセッションに保存するなどの処理を実施
 
-@socketio.on('login')
-def handle_login(data):
-    username = data.get('username')
-    password = data.get('password')
-    if authenticate(username, password):
-        emit('login_response', {'status': 'success', 'username': username})
-    else:
-        emit('login_response', {'status': 'error', 'message': 'ログイン失敗'})
-
+# ------------------------
+# チャット関連イベント
+# ------------------------
 @socketio.on('count_token')
 def handle_count_token(data):
     model_name = data.get('model_name')
     file_data_base64 = data.get('file_data')
-    file_name = data.get('file_name')
     file_mime_type = data.get('file_mime_type')
 
     if file_mime_type in EXTENSION_TO_MIME.values():
@@ -209,7 +300,6 @@ def handle_count_token(data):
         response = client.models.count_tokens(model=model_name, contents=content,)
         token = f"{response.total_tokens:,}"
         emit('total_tokens', {'total_tokens': token})
-
 
 @socketio.on('get_model_list')
 def handle_get_model_list():
@@ -225,7 +315,7 @@ def handle_cancel_stream(data):
 
 @socketio.on('send_message')
 def handle_message(data):
-    # 現在のクライアントのセッションIDを取得し、キャンセルフラグをリセット
+    # キャンセルフラグをリセット
     sid = request.sid
     cancellation_flags[sid] = False
 
@@ -251,7 +341,7 @@ def handle_message(data):
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats}, broadcast=True)
 
-    # ユーザーのプロンプトを履歴に追加して保存（UIには既に表示済み）
+    # ユーザーのプロンプトを履歴に追加
     messages.append({
         'role': 'user',
         'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')
@@ -259,7 +349,7 @@ def handle_message(data):
     save_chat_messages(user_dir, chat_id, messages)
 
     try:
-        # 添付ファイルがある場合の処理
+        # 添付ファイルがある場合
         if file_data_base64:
             file_data = base64.b64decode(file_data_base64)
             file_part = types.Part.from_bytes(data=file_data, mime_type=file_mime_type)
@@ -267,19 +357,18 @@ def handle_message(data):
         else:
             contents = message
 
-        configs = None
         if grounding_enabled:
             configs = GenerateContentConfig(
-                system_instruction= SYSTEM_INSTRUCTION,
+                system_instruction=SYSTEM_INSTRUCTION,
                 tools=[google_search_tool],
                 response_modalities=["TEXT"]
             )
         else:
             configs = GenerateContentConfig(
-                system_instruction= SYSTEM_INSTRUCTION,
+                system_instruction=SYSTEM_INSTRUCTION,
             )
 
-        # ストリーミング応答の開始
+        # ストリーミング応答開始
         response = chat.send_message_stream(message=contents, config=configs)
         full_response = ""
         response_chunks = []
@@ -287,7 +376,7 @@ def handle_message(data):
         formatted_metadata = ''
 
         for chunk in response:
-            # クライアントからキャンセル要求が来ている場合は中断
+            # クライアントがキャンセルをリクエストしたら中断
             if cancellation_flags.get(sid):
                 print("Streaming canceled by client")
                 break
@@ -299,11 +388,15 @@ def handle_message(data):
             if chunk.text:
                 full_response += chunk.text
                 emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
-        formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
-        full_response += formatted_metadata
-        emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-        formatted_metadata = ''
-        # グラウンディング処理（応答がキャンセルされていない場合のみ実施）
+
+        # トークン数情報を整形
+        if usage_metadata:
+            formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
+            full_response += formatted_metadata
+            emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
+            formatted_metadata = ''
+
+        # グラウンディング処理
         if grounding_enabled and not cancellation_flags.get(sid):
             all_grounding_links = ''
             all_grounding_queries = ''
@@ -319,6 +412,7 @@ def handle_message(data):
                         if hasattr(metadata, 'web_search_queries') and metadata.web_search_queries:
                             for query in metadata.web_search_queries:
                                 all_grounding_queries += f'{query} / '
+
             if all_grounding_queries:
                 all_grounding_queries = ' / '.join(
                     sorted(set(all_grounding_queries.rstrip(' /').split(' / ')))
@@ -329,7 +423,8 @@ def handle_message(data):
                 formatted_metadata += '\nQuery: ' + all_grounding_queries + '\n'
             full_response += formatted_metadata
             emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-        # 応答が途中でキャンセルされていた場合は、保存せずに終了
+
+        # キャンセルされていない場合は最終的な応答を保存
         if cancellation_flags.get(sid):
             return
 
@@ -344,7 +439,6 @@ def handle_message(data):
         # 応答処理終了後にキャンセルフラグを削除
         cancellation_flags.pop(sid, None)
 
-
 @socketio.on('delete_message')
 def handle_delete_message(data):
     username = data.get('username')
@@ -358,10 +452,8 @@ def handle_delete_message(data):
     if message_index == 0:
         delete_chat(user_dir, chat_id)
     else:
-        # メッセージを先頭から指定インデックスまで残す
         deleted_message_role = messages[message_index]['role']
         messages = messages[:message_index]
-        # ユーザー発言の数をカウント
         target_user_messages = sum(1 for msg in messages if msg['role'] == 'user')
         if deleted_message_role == 'model':
             gemini_index = find_gemini_index(gemini_history, target_user_messages, include_model_responses=False)
@@ -407,5 +499,12 @@ def handle_set_grounding(data):
     grounding_enabled = data.get('grounding_enabled')
     emit('grounding_updated', {'grounding_enabled': grounding_enabled})
 
+# -----------------------------------------------------------
+# 6) メイン実行
+# -----------------------------------------------------------
 if __name__ == '__main__':
+    # SQLite初期化
+    init_db()
+
+    # geventベースでサーバ起動（geventインストール済みの場合に自動で使用）
     socketio.run(app, debug=True)
