@@ -375,6 +375,7 @@ code {
 }
 
 .chat-history-item:hover {
+	border-radius: 3px;
   background-color: var(--secondary-hover-color);
 }
 
@@ -931,15 +932,15 @@ body.hide-header .header {
 .chat-title {
   font-size: 1em;
   color: var(--text-color);
-  margin: 0;
-  padding: 0.5em;
+  margin: 0.25em;
+  padding: 0.25em;
   cursor: pointer;
   display: inline-block;
   border: none;
 }
 
 .chat-title:hover {
-	border-radius: 2px;
+	border-radius: 3px;
   background-color: var(--secondary-hover-color);
 }
 

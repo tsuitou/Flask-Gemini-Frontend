@@ -510,11 +510,6 @@ def handle_delete_chat(data):
     delete_chat(user_dir, chat_id)
     emit('chat_deleted', {'chat_id': chat_id})
 
-@socketio.on('set_grounding')
-def handle_set_grounding(data):
-    grounding_enabled = data.get('grounding_enabled')
-    emit('grounding_updated', {'grounding_enabled': grounding_enabled})
-
 @socketio.on('rename_chat')
 def handle_rename_chat(data):
     username = data.get('username')

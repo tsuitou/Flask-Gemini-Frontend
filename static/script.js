@@ -953,12 +953,6 @@ const throttle = (callback, limit) => {
 // ----------------------------------------
 groundingSwitch.addEventListener('change', () => {
   groundingEnabled = groundingSwitch.checked;
-  socket.emit('set_grounding', { grounding_enabled: groundingEnabled });
-});
-
-socket.on('grounding_updated', (data) => {
-  groundingEnabled = data.grounding_enabled;
-  groundingSwitch.checked = groundingEnabled;
 });
 
 // ----------------------------------------
