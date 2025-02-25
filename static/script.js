@@ -40,6 +40,8 @@ let fileName = null;
 let fileMimeType = null;
 let isSameChat = false;
 let resendMessage = ''
+let currentChatTitle = null;
+
 
 const md = window.markdownit({
   html: false, // htmlタグを有効にする
@@ -170,27 +172,26 @@ socket.on('register_response', (response) => {
   }
 });
 
-// 例：アプリ初期化処理
 function initializeApp() {
-  // localStorageからusernameを取得してグローバル変数にセット
   username = localStorage.getItem('username');
-  // サーバー側に username を送信（接続直後にセットするなど）
   socket.emit('set_username', { username: username });
   
-  // その後、各種初期化処理を実行
+  // タイトル表示初期化
+  initializeChatTitle();
+  
+  // 他の初期化処理
   fetchModelList();
   fetchHistoryList();
   startNewChat();
-	// グローバルに一度だけ登録（他の場所で重複して登録されないようにする）
-	socket.off('chat_deleted'); // 既存のリスナーを削除
-	socket.on('chat_deleted', (data) => {
-		// 削除されたチャットが現在表示中の場合は新規チャットに切り替え
-		if (chat_id === data.chat_id) {
-			startNewChat();
-		}
-		// 履歴一覧を更新
-		fetchHistoryList();
-	});
+  
+  // 削除イベント処理
+  socket.off('chat_deleted');
+  socket.on('chat_deleted', (data) => {
+    if (chat_id === data.chat_id) {
+      startNewChat();
+    }
+    fetchHistoryList();
+  });
 }
 
 // ----------------------------------------
@@ -220,55 +221,289 @@ socket.on('model_list', (data) => {
 // ----------------------------------------
 // チャット履歴と新規チャット
 // ----------------------------------------
-function fetchHistoryList() {
-  if (!username) return;
-  socket.emit('get_history_list', { username: username });
+
+// チャットタイトル表示用のUIを初期化
+function initializeChatTitle() {
+  const mainContent = document.getElementById('mainContent');
+  
+  // 既存の要素があれば削除
+  const existingTitle = document.getElementById('chatTitleContainer');
+  if (existingTitle) existingTitle.remove();
+  
+  // タイトル表示用のHTML
+  const titleHTML = `
+    <div id="chatTitleContainer" class="chat-title-container">
+      <h3 id="chatTitle" class="chat-title">New Chat</h3>
+      <div id="titleMenu" class="title-menu hide">
+        <div class="title-menu-option" id="renameOption">
+          <i class="bx bx-edit"></i> リネーム
+        </div>
+        <div class="title-menu-option" id="bookmarkOption">
+          <i class="bx bx-bookmark"></i> ブックマーク
+        </div>
+      </div>
+      <div id="renameForm" class="rename-form hide">
+        <input type="text" id="renameInput" class="rename-input">
+        <div class="rename-buttons">
+          <button id="saveRenameButton">保存</button>
+          <button id="cancelRenameButton">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // MainContentの先頭に追加
+  mainContent.insertAdjacentHTML('afterbegin', titleHTML);
+  
+  // イベントリスナー追加
+  document.getElementById('chatTitle').addEventListener('click', toggleTitleMenu);
+  document.getElementById('renameOption').addEventListener('click', showRenameForm);
+  document.getElementById('bookmarkOption').addEventListener('click', toggleBookmark);
+  document.getElementById('saveRenameButton').addEventListener('click', saveNewTitle);
+  document.getElementById('cancelRenameButton').addEventListener('click', hideRenameForm);
+  
+  // 外部クリックでメニューを非表示に
+  document.addEventListener('click', function(e) {
+    const titleMenu = document.getElementById('titleMenu');
+    const chatTitle = document.getElementById('chatTitle');
+    
+    if (titleMenu && !titleMenu.classList.contains('hide') && 
+        !titleMenu.contains(e.target) && e.target !== chatTitle) {
+      titleMenu.classList.add('hide');
+    }
+  });
 }
 
-function displayHistoryList(history) {
-  chatHistoryList.innerHTML = '';
+// タイトルメニューの表示/非表示切り替え
+function toggleTitleMenu(e) {
+  e.stopPropagation();
+  const titleMenu = document.getElementById('titleMenu');
+  titleMenu.classList.toggle('hide');
+}
 
-  // chat_id をキーとした履歴アイテムの配列に変換
-  const historyItems = Object.entries(history);
-  // 降順に並べ替え
-  historyItems.sort((a, b) => Number(b[0]) - Number(a[0]));
+// リネームフォームを表示
+function showRenameForm() {
+  document.getElementById('titleMenu').classList.add('hide');
+  document.getElementById('renameForm').classList.remove('hide');
+  
+  const renameInput = document.getElementById('renameInput');
+  renameInput.value = currentChatTitle || document.getElementById('chatTitle').textContent;
+  renameInput.focus();
+}
 
-  historyItems.forEach(([chatId, chatTitle]) => {
-    const historyItem = document.createElement('div');
-    historyItem.classList.add('chat-history-item');
-    historyItem.style.cursor = 'pointer';
-    
-    // 履歴アイテム全体にクリックイベントを設定
-    historyItem.addEventListener('click', () => {
-      loadChat(chatId);
-      document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
-      historyItem.classList.add('active');
+// リネームフォームを非表示
+function hideRenameForm() {
+  document.getElementById('renameForm').classList.add('hide');
+}
+
+// 新しいタイトルを保存
+function saveNewTitle() {
+  const newTitle = document.getElementById('renameInput').value.trim();
+  
+  if (newTitle && chat_id) {
+    socket.emit('rename_chat', {
+      username: username,
+      chat_id: chat_id,
+      new_title: newTitle
     });
     
-    // タイトル部分（単なるテキスト）
-    const titleSpan = document.createElement('span');
-    titleSpan.textContent = chatTitle;
+    // UI即時更新
+    document.getElementById('chatTitle').textContent = newTitle;
+    currentChatTitle = newTitle;
+    hideRenameForm();
+  }
+}
+
+// ブックマーク切り替え
+function toggleBookmark() {
+  if (chat_id) {
+    socket.emit('toggle_bookmark', {
+      username: username,
+      chat_id: chat_id
+    });
+    document.getElementById('titleMenu').classList.add('hide');
+  }
+}
+
+// 履歴リストを表示
+function displayHistoryList(history) {
+  chatHistoryList.innerHTML = '';
+  
+  // ブックマークと履歴用のセクション作成
+  const bookmarkedHTML = `
+    <div class="chat-history-section">
+      <h4>ブックマーク</h4>
+      <div id="bookmarkedItems" class="chat-history-items"></div>
+    </div>
+  `;
+  
+  const historyHTML = `
+    <div class="chat-history-section">
+      <h4>履歴</h4>
+      <div id="historyItems" class="chat-history-items"></div>
+    </div>
+  `;
+  
+  // HTML追加
+  chatHistoryList.innerHTML = bookmarkedHTML + historyHTML;
+  
+  const bookmarkedItems = document.getElementById('bookmarkedItems');
+  const historyItems = document.getElementById('historyItems');
+  
+  // chat_idでソートした履歴アイテム
+  const sortedItems = Object.entries(history).sort((a, b) => Number(b[0]) - Number(a[0]));
+  
+  let hasBookmarks = false;
+  
+  // 各チャット履歴アイテムの生成
+  sortedItems.forEach(([chatId, chatData]) => {
+    // 新形式・旧形式の両方に対応
+    const isObject = typeof chatData === 'object';
+    const chatTitle = isObject ? chatData.title : chatData;
+    const isBookmarked = isObject && chatData.bookmarked;
+    
+    // チャット履歴アイテムを作成
+    const itemHTML = `
+      <div class="chat-history-item ${chatId === chat_id ? 'active' : ''}" data-chat-id="${chatId}">
+        ${isBookmarked ? '<i class="bx bxs-bookmark chat-history-bookmark-icon"></i>' : ''}
+        <span>${chatTitle}</span>
+        <button class="chat-history-delete-btn">×</button>
+      </div>
+    `;
+    
+    // ブックマークされているかどうかで表示先を決定
+    if (isBookmarked) {
+      bookmarkedItems.insertAdjacentHTML('beforeend', itemHTML);
+      hasBookmarks = true;
+    } else {
+      historyItems.insertAdjacentHTML('beforeend', itemHTML);
+    }
+  });
+  
+  // ブックマークがない場合はセクションを非表示
+  if (!hasBookmarks) {
+    document.querySelector('.chat-history-section:first-child').style.display = 'none';
+  }
+  
+  // 履歴アイテムにイベントリスナーを追加
+  document.querySelectorAll('.chat-history-item').forEach(item => {
+    const chatId = item.getAttribute('data-chat-id');
+    
+    // クリックで該当チャットをロード
+    item.addEventListener('click', () => {
+      loadChat(chatId);
+      document.querySelectorAll('.chat-history-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
     
     // 削除ボタン
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '×';
-    deleteBtn.classList.add('chat-history-delete-btn');
-    deleteBtn.addEventListener('click', (e) => {
+    item.querySelector('.chat-history-delete-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm('このチャット履歴を削除しますか？')) {
         socket.emit('delete_chat', { username: username, chat_id: chatId });
       }
     });
-    
-    // アイテムにタイトルと削除ボタンを追加
-    historyItem.appendChild(titleSpan);
-    historyItem.appendChild(deleteBtn);
-    
-    if (chatId === chat_id) {
-      historyItem.classList.add('active');
-    }
-    chatHistoryList.appendChild(historyItem);
   });
+}
+
+// サーバーからの応答処理
+socket.on('chat_renamed', (data) => {
+  if (data.chat_id === chat_id) {
+    document.getElementById('chatTitle').textContent = data.new_title;
+    currentChatTitle = data.new_title;
+  }
+});
+
+socket.on('bookmark_toggled', (data) => {
+  if (data.chat_id === chat_id) {
+    const bookmarkOption = document.getElementById('bookmarkOption');
+    if (data.bookmarked) {
+      bookmarkOption.innerHTML = '<i class="bx bxs-bookmark"></i> ブックマーク解除';
+    } else {
+      bookmarkOption.innerHTML = '<i class="bx bx-bookmark"></i> ブックマーク';
+    }
+  }
+});
+
+// チャットのロード処理を修正
+function loadChat(selectedChatId) {
+  if (!username) return;
+  
+  // 応答中ならキャンセル処理
+  if (isGeneratingResponse) {
+    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
+    isGeneratingResponse = false;
+    setPromptEnabled(true);
+    toggleResponseButtons(false);
+  }
+  
+  isSameChat = (chat_id === selectedChatId);
+  chat_id = selectedChatId;
+  
+  // チャットメッセージと履歴情報をロード
+  socket.emit('load_chat', { username: username, chat_id: selectedChatId });
+  
+  // ファイル添付情報をリセット
+  fileData = null;
+  fileName = null;
+  fileMimeType = null;
+  attachmentPreview.innerHTML = "";
+  fileInput.value = "";
+  
+  // チャットタイトルを更新
+  updateChatTitle(selectedChatId);
+}
+
+// チャットタイトルを更新する簡易関数
+function updateChatTitle(chatId) {
+  // サーバーに履歴情報をリクエスト
+  socket.emit('get_history_list', { username: username });
+  
+  // 履歴情報のコールバックでタイトルを設定（既存イベント利用）
+  socket.once('history_list', (data) => {
+    const chatData = data.history[chatId];
+    if (chatData) {
+      const title = typeof chatData === 'object' ? chatData.title : chatData;
+      const isBookmarked = typeof chatData === 'object' && chatData.bookmarked;
+      
+      // タイトル更新
+      document.getElementById('chatTitle').textContent = title;
+      currentChatTitle = title;
+      
+      // ブックマーク状態更新
+      const bookmarkOption = document.getElementById('bookmarkOption');
+      if (isBookmarked) {
+        bookmarkOption.innerHTML = '<i class="bx bxs-bookmark"></i> ブックマーク解除';
+      } else {
+        bookmarkOption.innerHTML = '<i class="bx bx-bookmark"></i> ブックマーク';
+      }
+    }
+  });
+}
+
+// 新規チャット作成時の処理修正
+function startNewChat() {
+  if (!username) return;
+  socket.emit('new_chat', { username: username });
+  chatsContainer.innerHTML = '';
+  chat_id = null;
+  fileData = null;
+  fileName = null;
+  fileMimeType = null;
+  isSameChat = false;
+  
+  // タイトルをリセット
+  document.getElementById('chatTitle').textContent = 'New Chat';
+  currentChatTitle = 'New Chat';
+  
+  // ブックマークオプションもリセット
+  document.getElementById('bookmarkOption').innerHTML = '<i class="bx bx-bookmark"></i> ブックマーク';
+}
+
+
+function fetchHistoryList() {
+  if (!username) return;
+  socket.emit('get_history_list', { username: username });
 }
 
 // サーバー側からの最新履歴受信時にも自動で再描画
@@ -281,41 +516,11 @@ newChatButton.addEventListener('click', () => {
   document.querySelectorAll('.chat-history-item').forEach(item => item.classList.remove('active'));
 });
 
-function startNewChat() {
-  if (!username) return;
-  socket.emit('new_chat', { username: username });
-  chatsContainer.innerHTML = '';
-  chat_id = null;
-  fileData = null;
-  fileName = null;
-  fileMimeType = null;
-	isSameChat = false;
-}
-
 socket.on('chat_created', (data) => {
   chat_id = data.chat_id; // 新規チャットのIDを保存
   fetchHistoryList();      // 履歴一覧を再読み込み
 	loadChat(chat_id)
 });
-
-function loadChat(selectedChatId) {
-  if (!username) return;
-  // もし現在応答中ならキャンセルイベントを送信して応答処理を中断する
-  if (isGeneratingResponse) {
-    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
-    isGeneratingResponse = false; // クライアント側のフラグもリセット
-		setPromptEnabled(true);
-		toggleResponseButtons(false);
-  }
-	isSameChat = (chat_id === selectedChatId)
-  chat_id = selectedChatId;
-  socket.emit('load_chat', { username: username, chat_id: selectedChatId });
-	fileData = null;
-	fileName = null;
-	fileMimeType = null;
-	attachmentPreview.innerHTML = "";
-	fileInput.value = "";
-}
 
 socket.on('chat_loaded', (data) => {
 	if (isSameChat) {

@@ -344,7 +344,7 @@ def handle_message(data):
     past_chats = load_past_chats(user_dir)
     if chat_id not in past_chats:
         chat_title = message[:29]
-        past_chats[chat_id] = chat_title
+        past_chats[chat_id] = {"title": chat_title, "bookmarked": False}
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats})
 
@@ -515,6 +515,38 @@ def handle_set_grounding(data):
     grounding_enabled = data.get('grounding_enabled')
     emit('grounding_updated', {'grounding_enabled': grounding_enabled})
 
+@socketio.on('rename_chat')
+def handle_rename_chat(data):
+    username = data.get('username')
+    chat_id = data.get('chat_id')
+    new_title = data.get('new_title')
+    
+    user_dir = get_user_dir(username)
+    past_chats = load_past_chats(user_dir)
+    
+    if chat_id in past_chats:
+        past_chats[chat_id]["title"] = new_title
+        save_past_chats(user_dir, past_chats)
+        emit('chat_renamed', {'chat_id': chat_id, 'new_title': new_title})
+        emit('history_list', {'history': past_chats})
+
+# ブックマーク切り替え用のSocketIOイベント
+@socketio.on('toggle_bookmark')
+def handle_toggle_bookmark(data):
+    username = data.get('username')
+    chat_id = data.get('chat_id')
+    
+    user_dir = get_user_dir(username)
+    past_chats = load_past_chats(user_dir)
+    
+    if chat_id in past_chats:
+        past_chats[chat_id]["bookmarked"] = not past_chats[chat_id].get("bookmarked", False)
+        save_past_chats(user_dir, past_chats)
+        emit('bookmark_toggled', {
+            'chat_id': chat_id, 
+            'bookmarked': past_chats[chat_id]["bookmarked"]
+        })
+        emit('history_list', {'history': past_chats})
 # -----------------------------------------------------------
 # 6) メイン実行
 # -----------------------------------------------------------
