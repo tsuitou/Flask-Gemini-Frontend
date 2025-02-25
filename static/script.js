@@ -38,7 +38,8 @@ let isGeneratingResponse = false;
 let fileData = null;
 let fileName = null;
 let fileMimeType = null;
-let sameChat = false;
+let isSameChat = false;
+let resendMessage = ''
 
 const md = window.markdownit({
   html: false, // htmlタグを有効にする
@@ -285,17 +286,16 @@ function startNewChat() {
   socket.emit('new_chat', { username: username });
   chatsContainer.innerHTML = '';
   chat_id = null;
-  promptInput.value = '';
   fileData = null;
   fileName = null;
   fileMimeType = null;
-	sameChat = false;
+	isSameChat = false;
 }
 
 socket.on('chat_created', (data) => {
   chat_id = data.chat_id; // 新規チャットのIDを保存
   fetchHistoryList();      // 履歴一覧を再読み込み
-  loadChat(chat_id);       // 新規チャットを自動で読み込む
+	loadChat(chat_id)
 });
 
 function loadChat(selectedChatId) {
@@ -307,7 +307,7 @@ function loadChat(selectedChatId) {
 		setPromptEnabled(true);
 		toggleResponseButtons(false);
   }
-	if (chat_id === selectedChatId) sameChat = true;
+	isSameChat = (chat_id === selectedChatId)
   chat_id = selectedChatId;
   socket.emit('load_chat', { username: username, chat_id: selectedChatId });
 	fileData = null;
@@ -318,21 +318,26 @@ function loadChat(selectedChatId) {
 }
 
 socket.on('chat_loaded', (data) => {
-	if (sameChat) {
+	if (isSameChat) {
 		updateChatDisplay(data.messages);
-		sameChat = false;
 	} else {
+		resendMessage = ''
 		displayMessages(data.messages);
 		scrollToBottom();
 	}
   // チャット全体再描画後にコードブロックを処理する
   hljs.highlightAll();
   addCopyButtonToCodeBlocks();
+	if (resendMessage != '') {
+		sendMessage(resendMessage);
+		resendMessage = ''
+	}
 });
 
 function displayMessages(messages) {
   chatsContainer.innerHTML = '';
   messages.forEach((message, index) => {
+    const resendButton = message.role === 'user' ? `<button onClick="resendPrompt((this), ${index})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>` : '';
     const messageElement = createChatMessageElement(
       `<div class="message__content">
          <img class="message__avatar" src="${ message.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL }" alt="${message.role} avatar">
@@ -341,6 +346,7 @@ function displayMessages(messages) {
 			 <div class="button__icons">
 				 <button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
 				 <button onClick="copyMessageToClipboard(this)" class="message__copy-button"><i class='bx bx-copy-alt'></i></button>
+				 ${resendButton}
 			 </div>`,
       message.role, message.role === 'user' ? 'message--outgoing' : 'message--incoming'
     );
@@ -358,18 +364,16 @@ function displayMessages(messages) {
 function createMessageNode(msg, index) {
   const avatarURL = msg.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL;
   const messageClass = msg.role === 'user' ? 'message--outgoing' : 'message--incoming';
+	const resendButton = msg.role === 'user' ? `<button onClick="resendPrompt((this), ${index})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>` : '';
   const htmlContent = `
     <div class="message__content">
       <img class="message__avatar" src="${avatarURL}" alt="${msg.role} avatar">
       <p class="message__text"></p>
     </div>
 		<div class="button__icons">
-			<button class="message__delete-button" onclick="deleteChatMessage(${index})">
-				<i class='bx bx-trash'></i>
-			</button>
-			<button onClick="copyMessageToClipboard(this)" class="message__copy-button">
-				<i class='bx bx-copy-alt'></i>
-			</button>
+			<button class="message__delete-button" onclick="deleteChatMessage(${index})"><i class='bx bx-trash'></i></button>
+			<button onClick="copyMessageToClipboard(this)" class="message__copy-button"><i class='bx bx-copy-alt'></i></button>
+			${resendButton}
 		</div>
   `;
   const node = createChatMessageElement(htmlContent, msg.role, messageClass);
@@ -429,19 +433,23 @@ function updateChatDisplay(newHistory) {
 
 function deleteChatMessage(index) {
   if (!username || !chat_id) return;
-  socket.emit('delete_message', { username: username, chat_id: chat_id, message_index: index });
+  socket.emit('delete_message', { username: username, chat_id: chat_id, message_index: index});
 }
 
 socket.on('message_deleted', (data) => {
 	if (data.index === 0) {
 		startNewChat();
 	} else { 
-		if (chat_id === data.chat_id) {
-			loadChat(chat_id);
-			fetchHistoryList();
-		}
+		fetchHistoryList();
+		loadChat(chat_id);
 	}
 });
+
+function resendPrompt(resendButton, index) {
+	if (isGeneratingResponse) return;
+	resendMessage = resendButton.parentElement.parentElement.querySelector('.message__text').innerText;
+	deleteChatMessage(index)
+}
 
 // ----------------------------------------
 // メッセージ送受信
@@ -478,12 +486,22 @@ function handleKeyDown(event) {
 
 promptForm.addEventListener('submit', handleSendMessage);
 
-function handleSendMessage(e) {
+function handleSendMessage (e) {
   e.preventDefault();
   if (isGeneratingResponse) return;
   const message = promptInput.value;
   if (!message && !fileData) return;
-  
+
+	sendMessage(message);
+
+  promptInput.value = '';
+	promptInput.style.height = 'auto';
+
+}
+
+function sendMessage(message) {
+  if (isGeneratingResponse) return;
+
   // 応答中フラグをセットし、入力欄を無効化
   isGeneratingResponse = true;
   setPromptEnabled(false);
@@ -492,8 +510,6 @@ function handleSendMessage(e) {
 
   const userMessage = message + (fileName ? `\n\n[添付ファイル: ${fileName}]` : '');
   displayOutgoingMessage(userMessage);
-  promptInput.value = '';
-	promptInput.style.height = 'auto';
 
   const messageData = {
     username: username,
@@ -521,12 +537,9 @@ function displayOutgoingMessage(message) {
       <p class="message__text"></p>
     </div>
 		<div class="button__icons">
-			<button class="message__delete-button" onclick="deleteChatMessage(${chatsContainer.children.length})">
-				<i class='bx bx-trash'></i>
-			</button>
-			<button onClick="copyMessageToClipboard(this)" class="message__copy-button">
-				<i class='bx bx-copy-alt'></i>
-			</button>
+			<button class="message__delete-button" onclick="deleteChatMessage(${chatsContainer.children.length})"><i class='bx bx-trash'></i></button>
+			<button onClick="copyMessageToClipboard(this)" class="message__copy-button"><i class='bx bx-copy-alt'></i></button>
+			<button onClick="resendPrompt((this), ${chatsContainer.children.length})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>
 		</div>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'user', 'message--outgoing');

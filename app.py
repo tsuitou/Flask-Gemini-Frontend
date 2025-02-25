@@ -479,7 +479,7 @@ def handle_delete_message(data):
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, gemini_history)
 
-    emit('message_deleted', {'chat_id': chat_id})
+    emit('message_deleted', {'index': message_index})
 
 @socketio.on('get_history_list')
 def handle_get_history_list(data):

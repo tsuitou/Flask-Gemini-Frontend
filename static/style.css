@@ -526,6 +526,24 @@ code {
   color: var(--text-color);
 }
 
+.resend__prompt-button {
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  margin-left: 2em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.message:hover .resend__prompt-button {
+  opacity: 1;
+}
+
+.resend__prompt-button:hover {
+  color: var(--text-color);
+}
+
 /************************************
  * 5. フォームやボタンなどのパーツ
  ************************************/
