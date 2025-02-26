@@ -124,7 +124,6 @@ def handle_login(data):
         # ここでauto_login_tokenを生成してDBに保存し、クライアントに返す
         version_salt = VERSION  # 適宜、環境変数 or DBで管理してもOK
         auto_login_token = generate_auto_login_token(username, version_salt)
-        print(auto_login_token)
         # DBに保存
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -203,6 +202,21 @@ def get_user_dir(username):
     user_dir = os.path.join(USER_DIR, username)
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
+
+def get_username_from_token(token):
+    """トークンからユーザー名を取得する"""
+    if not token:
+        return None
+    
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT username FROM accounts WHERE auto_login_token = ?', (token,))
+    row = c.fetchone()
+    conn.close()
+    
+    if row:
+        return row[0]
+    return None
 
 # -----------------------------------------------------------
 # 4) チャット履歴管理 (従来どおりファイルに保存)
@@ -286,9 +300,14 @@ def index():
 
 @socketio.on('set_username')
 def handle_set_username(data):
-    username = data.get('username')
-    print("Received username from client:", username)
-    # 必要ならば、Flask のセッションに保存するなどの処理を実施
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if username:
+        print(f"Token authenticated as user: {username}")
+        emit('set_username_response', {'status': 'success', 'username': username})
+    else:
+        print("Invalid token received")
+        emit('set_username_response', {'status': 'error', 'message': '無効なトークンです'})
 
 # ------------------------
 # チャット関連イベント
@@ -326,7 +345,11 @@ def handle_message(data):
     sid = request.sid
     cancellation_flags[sid] = False
 
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     model_name = data.get('model_name')
     message = data.get('message')
@@ -343,7 +366,7 @@ def handle_message(data):
     # 新規チャットの場合、past_chats にタイトルを登録
     past_chats = load_past_chats(user_dir)
     if chat_id not in past_chats:
-        chat_title = message[:29]
+        chat_title = message[:30]
         past_chats[chat_id] = {"title": chat_title, "bookmarked": False}
         save_past_chats(user_dir, past_chats)
         emit('history_list', {'history': past_chats})
@@ -457,7 +480,11 @@ def handle_disconnect():
 
 @socketio.on('delete_message')
 def handle_delete_message(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     message_index = data.get('message_index')
 
@@ -483,14 +510,22 @@ def handle_delete_message(data):
 
 @socketio.on('get_history_list')
 def handle_get_history_list(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     user_dir = get_user_dir(username)
     past_chats = load_past_chats(user_dir)
     emit('history_list', {'history': past_chats})
 
 @socketio.on('load_chat')
 def handle_load_chat(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     user_dir = get_user_dir(username)
     messages = load_chat_messages(user_dir, chat_id)
@@ -498,13 +533,21 @@ def handle_load_chat(data):
 
 @socketio.on('new_chat')
 def handle_new_chat(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     new_chat_id = f'{time.time()}'
     emit('chat_created', {'chat_id': new_chat_id})
 
 @socketio.on('delete_chat')
 def handle_delete_chat(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     user_dir = get_user_dir(username)
     delete_chat(user_dir, chat_id)
@@ -512,7 +555,11 @@ def handle_delete_chat(data):
 
 @socketio.on('rename_chat')
 def handle_rename_chat(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     new_title = data.get('new_title')
     
@@ -528,7 +575,11 @@ def handle_rename_chat(data):
 # ブックマーク切り替え用のSocketIOイベント
 @socketio.on('toggle_bookmark')
 def handle_toggle_bookmark(data):
-    username = data.get('username')
+    token = data.get('token')
+    username = get_username_from_token(token)
+    if not username:
+        emit('error', {'message': '認証エラー'})
+        return
     chat_id = data.get('chat_id')
     
     user_dir = get_user_dir(username)

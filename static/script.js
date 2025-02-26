@@ -31,6 +31,7 @@ const dragOverlay = document.getElementById('dragOverlay');
 
 // State variables
 let username = null;
+let token = null;
 let chat_id = null;
 let currentModel = null;
 let groundingEnabled = false;
@@ -172,9 +173,35 @@ socket.on('register_response', (response) => {
   }
 });
 
+// ユーザー名設定のレスポンスを処理
+socket.on('set_username_response', (data) => {
+  if (data.status === 'success') {
+    username = data.username;
+    console.log(`認証成功: ${username}`);
+  } else {
+    console.error('認証エラー:', data.message);
+    // エラー時は再ログインを促す
+    localStorage.removeItem('autoLoginToken');
+    localStorage.removeItem('username');
+    showLoginForm();
+  }
+});
+
+// エラー処理を追加
+socket.on('error', (data) => {
+  alert(data.message);
+  // 認証エラーの場合はログイン画面に戻す
+  if (data.message.includes('認証')) {
+    localStorage.removeItem('autoLoginToken');
+    localStorage.removeItem('username');
+    showLoginForm();
+  }
+});
+
 function initializeApp() {
   username = localStorage.getItem('username');
-  socket.emit('set_username', { username: username });
+	token = localStorage.getItem('autoLoginToken');
+  socket.emit('set_username', { token: token});
   
   // タイトル表示初期化
   initializeChatTitle();
@@ -302,7 +329,7 @@ function saveNewTitle() {
   
   if (newTitle && chat_id) {
     socket.emit('rename_chat', {
-      username: username,
+      token: token,
       chat_id: chat_id,
       new_title: newTitle
     });
@@ -318,7 +345,7 @@ function saveNewTitle() {
 function toggleBookmark() {
   if (chat_id) {
     socket.emit('toggle_bookmark', {
-      username: username,
+      token: token,
       chat_id: chat_id
     });
     document.getElementById('titleMenu').classList.add('hide');
@@ -400,7 +427,7 @@ function displayHistoryList(history) {
     item.querySelector('.chat-history-delete-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       if (confirm('このチャット履歴を削除しますか？')) {
-        socket.emit('delete_chat', { username: username, chat_id: chatId });
+        socket.emit('delete_chat', { token: token, chat_id: chatId });
       }
     });
   });
@@ -431,7 +458,7 @@ function loadChat(selectedChatId) {
   
   // 応答中ならキャンセル処理
   if (isGeneratingResponse) {
-    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
+    socket.emit('cancel_stream', { token: token, chat_id: chat_id });
     isGeneratingResponse = false;
     setPromptEnabled(true);
     toggleResponseButtons(false);
@@ -441,7 +468,7 @@ function loadChat(selectedChatId) {
   chat_id = selectedChatId;
   
   // チャットメッセージと履歴情報をロード
-  socket.emit('load_chat', { username: username, chat_id: selectedChatId });
+  socket.emit('load_chat', { token: token, chat_id: selectedChatId });
   
   // ファイル添付情報をリセット
   fileData = null;
@@ -457,7 +484,7 @@ function loadChat(selectedChatId) {
 // チャットタイトルを更新する簡易関数
 function updateChatTitle(chatId) {
   // サーバーに履歴情報をリクエスト
-  socket.emit('get_history_list', { username: username });
+  socket.emit('get_history_list', { token: token });
   
   // 履歴情報のコールバックでタイトルを設定（既存イベント利用）
   socket.once('history_list', (data) => {
@@ -484,7 +511,7 @@ function updateChatTitle(chatId) {
 // 新規チャット作成時の処理修正
 function startNewChat() {
   if (!username) return;
-  socket.emit('new_chat', { username: username });
+  socket.emit('new_chat', { token: token });
   chatsContainer.innerHTML = '';
   chat_id = null;
   fileData = null;
@@ -503,7 +530,7 @@ function startNewChat() {
 
 function fetchHistoryList() {
   if (!username) return;
-  socket.emit('get_history_list', { username: username });
+  socket.emit('get_history_list', { token: token });
 }
 
 // サーバー側からの最新履歴受信時にも自動で再描画
@@ -638,7 +665,7 @@ function updateChatDisplay(newHistory) {
 
 function deleteChatMessage(index) {
   if (!username || !chat_id) return;
-  socket.emit('delete_message', { username: username, chat_id: chat_id, message_index: index});
+  socket.emit('delete_message', { token: token, chat_id: chat_id, message_index: index});
 }
 
 socket.on('message_deleted', (data) => {
@@ -717,7 +744,7 @@ function sendMessage(message) {
   displayOutgoingMessage(userMessage);
 
   const messageData = {
-    username: username,
+    token: token,
     chat_id: chat_id,
     model_name: currentModel,
     message: message,
@@ -879,7 +906,7 @@ promptInput.addEventListener('input', function() {
 stopButton.addEventListener('click', () => {
   // 現在応答中ならキャンセルイベントを送信
   if (isGeneratingResponse) {
-    socket.emit('cancel_stream', { username: username, chat_id: chat_id });
+    socket.emit('cancel_stream', { token: token, chat_id: chat_id });
     // 応答中フラグをリセットして、入力欄を再有効化
     isGeneratingResponse = false;
     setPromptEnabled(true);
