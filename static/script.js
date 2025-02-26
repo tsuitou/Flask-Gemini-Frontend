@@ -1,5 +1,6 @@
 const socket = io();
 
+
 // UI要素の取得（省略せずそのまま）
 const loginWrapper = document.getElementById('loginWrapper');
 const usernameInput = document.getElementById('username');
@@ -45,8 +46,15 @@ let currentChatTitle = null;
 
 
 const md = window.markdownit({
-  html: false, // htmlタグを有効にする
-  breaks: true, // md内の改行を<br>に変換
+  html: false,
+  breaks: true,
+});
+
+const tm = window.texmath.use(katex);
+md.use(tm, {
+  engine: katex,
+  delimiters: 'dollars',  // $...$ と $$...$$ 記法を使用
+  macros: { /* カスタムマクロがあれば設定 */ }
 });
 
 // ----------------------------------------
@@ -558,7 +566,7 @@ socket.on('chat_loaded', (data) => {
 		scrollToBottom();
 	}
   // チャット全体再描画後にコードブロックを処理する
-  hljs.highlightAll();
+  safeHighlightAll();
   addCopyButtonToCodeBlocks();
 	if (resendMessage != '') {
 		sendMessage(resendMessage);
@@ -811,7 +819,7 @@ socket.on('gemini_response_chunk', (data) => {
   // throttle の返り値を即時呼び出す
   const throttledUpdate = throttle(() => {
     messageElement.innerHTML = md.render(chunkBuffer);
-    hljs.highlightAll();
+    safeHighlightAll();
     addCopyButtonToCodeBlocks();
   }, 100);
   throttledUpdate();
@@ -937,21 +945,39 @@ const copyMessageToClipboard = (copyButton) => {
   setTimeout(() => (copyButton.innerHTML = `<i class='bx bx-copy-alt'></i>`), 2000);
 };
 
-const addCopyButtonToCodeBlocks = () => {
+// 既存の hljs.highlightAll() の呼び出しを置き換える関数
+function safeHighlightAll() {
+  // 未ハイライトのコードブロックのみを選択
+  const notHighlightedBlocks = document.querySelectorAll('pre code:not(.hljs)');
+  notHighlightedBlocks.forEach(block => {
+    hljs.highlightElement(block);
+  });
+}
+
+// コードブロックのコピーボタン追加処理も修正
+function addCopyButtonToCodeBlocks() {
   const codeBlocks = document.querySelectorAll('pre');
   codeBlocks.forEach((block) => {
+    // 既にコピーボタンが追加されているブロックはスキップ
     if (block.querySelector('.code__copy-btn')) return;
+    
     const codeElement = block.querySelector('code');
     if (!codeElement) return;
-    let language = [...codeElement.classList].find((cls) => cls.startsWith('language-'))?.replace('language-', '') || 'Text';
+    
+    let language = [...codeElement.classList]
+      .find((cls) => cls.startsWith('language-'))
+      ?.replace('language-', '') || 'Text';
+    
     const languageLabel = document.createElement('div');
     languageLabel.innerText = language.charAt(0).toUpperCase() + language.slice(1);
     languageLabel.classList.add('code__language-label');
     block.appendChild(languageLabel);
+    
     const copyButton = document.createElement('button');
     copyButton.innerHTML = `<i class='bx bx-copy'></i>`;
     copyButton.classList.add('code__copy-btn');
     block.appendChild(copyButton);
+    
     copyButton.addEventListener('click', () => {
       navigator.clipboard.writeText(codeElement.innerText).then(() => {
         copyButton.innerHTML = `<i class='bx bx-check'></i>`;
@@ -962,7 +988,7 @@ const addCopyButtonToCodeBlocks = () => {
       });
     });
   });
-};
+}
 
 const throttle = (callback, limit) => {
   let waiting = false;

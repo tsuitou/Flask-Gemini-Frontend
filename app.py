@@ -410,7 +410,6 @@ def handle_message(data):
             if cancellation_flags.get(sid):
                 print("Streaming canceled by client")
                 break
-
             if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
                 usage_metadata = chunk.usage_metadata
 
