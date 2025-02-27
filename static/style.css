@@ -34,7 +34,7 @@
 /* body */
 body {
   background: var(--primary-color);
-  /* display: flex;  // body の flex レイアウトを削除したい場合はコメントアウト */
+  overflow: hidden;
 }
 
 /* textarea */
