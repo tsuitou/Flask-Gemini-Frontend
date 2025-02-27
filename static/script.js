@@ -580,7 +580,6 @@ function displayMessages(messages) {
     const resendButton = message.role === 'user' ? `<button onClick="resendPrompt((this), ${index})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>` : '';
     const messageElement = createChatMessageElement(
       `<div class="message__content">
-         <img class="message__avatar" src="${ message.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL }" alt="${message.role} avatar">
          <p class="message__text"></p>
        </div>
 			 <div class="button__icons">
@@ -607,7 +606,6 @@ function createMessageNode(msg, index) {
 	const resendButton = msg.role === 'user' ? `<button onClick="resendPrompt((this), ${index})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>` : '';
   const htmlContent = `
     <div class="message__content">
-      <img class="message__avatar" src="${avatarURL}" alt="${msg.role} avatar">
       <p class="message__text"></p>
     </div>
 		<div class="button__icons">
@@ -773,7 +771,6 @@ function sendMessage(message) {
 function displayOutgoingMessage(message) {
   const messageHtml = `
     <div class="message__content">
-      <img class="message__avatar" src="${PROFILE_IMG_URL}" alt="User avatar">
       <p class="message__text"></p>
     </div>
 		<div class="button__icons">
@@ -790,13 +787,7 @@ function displayOutgoingMessage(message) {
 function displayIncomingMessage(message, index) {
   const messageHtml = `
     <div class="message__content">
-      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
       <p class="message__text"></p>
-      <div class="message__loading-indicator hide">
-        <div class="message__loading-bar"></div>
-        <div class="message__loading-bar"></div>
-        <div class="message__loading-bar"></div>
-      </div>
     </div>
   `;
   const messageElement = createChatMessageElement(messageHtml, 'model', 'message--incoming');
@@ -818,7 +809,7 @@ socket.on('gemini_response_chunk', (data) => {
   messageElement.dataset.chunkBuffer = chunkBuffer;
   // throttle の返り値を即時呼び出す
   const throttledUpdate = throttle(() => {
-    messageElement.innerHTML = md.render(chunkBuffer);
+    messageElement.innerHTML = md.render(chunkBuffer + '\n\n▌');
     safeHighlightAll();
     addCopyButtonToCodeBlocks();
   }, 100);
@@ -876,7 +867,6 @@ function deleteErrorMessage(button) {
 function displayLoadingIndicator() {
   const loadingHtml = `
     <div class="message__content">
-      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
       <p class="message__text"></p>
       <div class="message__loading-indicator">
         <div class="message__loading-bar"></div>

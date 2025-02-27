@@ -439,7 +439,6 @@ code {
 
 .chats .message__content {
   display: flex;
-  align-items: flex-start;
   gap: 1.5em;
 }
 
@@ -451,7 +450,7 @@ code {
 
 .chats .message--outgoing .message__text {
   padding: 1em 1em;
-  border-radius: 30px;
+  border-radius: 20px;
   background: var(--secondary-color);
   white-space: pre-wrap;
   word-break: break-all;
