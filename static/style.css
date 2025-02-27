@@ -6,7 +6,7 @@
   padding: 0;
   outline: none;
   box-sizing: border-box;
-  font-family: "メイリオ";
+	font-family: "メイリオ", Meiryo, sans-serif;
 }
 
 /************************************
@@ -23,6 +23,7 @@
   --text-secondary-color: #4D4D4D;
   --heading-secondary-color: #C4C7C5;
   --placeholder-color: #717075;
+	--font-styrene-b: "__styreneB_5d855b","__styreneB_Fallback_5d855b";
 }
 
 /************************************
@@ -237,7 +238,6 @@ code {
 }
 
 .katex {
-	font-family: YuMincho;
 	font-size: 20px;
 	padding:0.5em;
 }
@@ -328,6 +328,7 @@ code {
   order: 3;
   border-left: 1px solid var(--secondary-hover-color);
   padding-left: 1em;
+	font-size: 14px;
 }
 
 .sidebar h3 {
@@ -349,7 +350,7 @@ code {
 .chat-history-section h4 {
   color: var(--text-secondary-color);
   margin-bottom: 0.5em;
-  font-size: 0.9em;
+  font-size: 14px;
   text-transform: uppercase;
 }
 
