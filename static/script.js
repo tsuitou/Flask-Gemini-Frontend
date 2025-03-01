@@ -601,7 +601,6 @@ function displayMessages(messages) {
 
 // ヘルパー関数：新規メッセージDOM要素を生成する
 function createMessageNode(msg, index) {
-  const avatarURL = msg.role === 'user' ? PROFILE_IMG_URL : GEMINI_IMG_URL;
   const messageClass = msg.role === 'user' ? 'message--outgoing' : 'message--incoming';
 	const resendButton = msg.role === 'user' ? `<button onClick="resendPrompt((this), ${index})" class="resend__prompt-button"><i class='bx bx-refresh'></i></button>` : '';
   const htmlContent = `
@@ -835,7 +834,6 @@ function displayErrorMessage(error) {
   // エラー用のHTMLを作成（アイコンは1つのみ）
   const errorHtml = `
     <div class="message__content message--error">
-      <img class="message__avatar" src="${GEMINI_IMG_URL}" alt="Gemini avatar">
       <p class="message__text">エラーが発生しました: ${error}</p>
     </div>
     <button class="message__delete-button error-delete" onclick="deleteErrorMessage(this)">
