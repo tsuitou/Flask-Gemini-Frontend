@@ -11,7 +11,8 @@ import base64
 import time
 import sqlite3
 import joblib
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, emit
 from google import genai
 from google.genai import types 
@@ -24,11 +25,11 @@ from filelock import FileLock
 # 1) Flask + SocketIO の初期化
 # -----------------------------------------------------------
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*")
 
 # 環境変数の読み込み
 load_dotenv()
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 client = genai.Client(api_key=GOOGLE_API_KEY)
@@ -36,31 +37,31 @@ client = genai.Client(api_key=GOOGLE_API_KEY)
 google_search_tool = Tool(
     google_search=GoogleSearch()
 )
-MODELS = os.environ.get('MODELS', '').split(',')
-SYSTEM_INSTRUCTION = os.environ.get('SYSTEM_INSTRUCTION')
-VERSION = os.environ.get('VERSION')
+MODELS = os.environ.get("MODELS", "").split(",")
+SYSTEM_INSTRUCTION = os.environ.get("SYSTEM_INSTRUCTION")
+VERSION = os.environ.get("VERSION")
 
 # -----------------------------------------------------------
 # 2) SQLite 用の初期設定
 # -----------------------------------------------------------
-DB_FILE = 'data/database.db'
-os.makedirs('data/', exist_ok=True)  # data/ フォルダがなければ作成
+DB_FILE = "data/database.db"
+os.makedirs("data/", exist_ok=True)  # data/ フォルダがなければ作成
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('''
+    c.execute("""
     CREATE TABLE IF NOT EXISTS accounts (
         username TEXT PRIMARY KEY,
         password TEXT,
         auto_login_token TEXT
     )
-    ''')
+    """)
     conn.commit()
     conn.close()
 
 def generate_auto_login_token(username: str, version_salt: str):
-    raw = (username + version_salt).encode('utf-8')
+    raw = (username + version_salt).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 def hash_password(password):
@@ -71,33 +72,33 @@ def verify_password(password, hashed):
 
 def register_user(username, password):
     """新規ユーザー登録"""
-    if username == '' or password == '':
-        return {'status': 'error', 'message': 'ユーザー名かパスワードが空欄です'}
+    if username == "" or password == "":
+        return {"status": "error", "message": "ユーザー名かパスワードが空欄です"}
     # 英数字以外の文字がないかチェック
-    if any(not re.match(r'^[a-zA-Z0-9]*$', field) for field in (username, password)):
-        return {'status': 'error', 'message': '英数字以外の文字が含まれています。'}
+    if any(not re.match(r"^[a-zA-Z0-9]*$", field) for field in (username, password)):
+        return {"status": "error", "message": "英数字以外の文字が含まれています。"}
 
     # すでに同名ユーザーが存在するかチェック
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT username FROM accounts WHERE username=?', (username,))
+    c.execute("SELECT username FROM accounts WHERE username=?", (username,))
     existing = c.fetchone()
     if existing:
         conn.close()
-        return {'status': 'error', 'message': '既存のユーザー名です。'}
+        return {"status": "error", "message": "既存のユーザー名です。"}
 
     # 挿入
     hashed_pw = hash_password(password)
-    c.execute('INSERT INTO accounts (username, password) VALUES (?, ?)', (username, hashed_pw))
+    c.execute("INSERT INTO accounts (username, password) VALUES (?, ?)", (username, hashed_pw))
     conn.commit()
     conn.close()
-    return {'status': 'success', 'message': '登録完了'}
+    return {"status": "success", "message": "登録完了"}
 
 def authenticate(username, password):
     """ユーザー認証"""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT password FROM accounts WHERE username=?', (username,))
+    c.execute("SELECT password FROM accounts WHERE username=?", (username,))
     row = c.fetchone()
     conn.close()
     if row:
@@ -108,17 +109,17 @@ def authenticate(username, password):
 # ------------------------
 # 認証 (SQLite)
 # ------------------------
-@socketio.on('register')
+@socketio.on("register")
 def handle_register(data):
-    username = data.get('username')
-    password = data.get('password')
+    username = data.get("username")
+    password = data.get("password")
     result = register_user(username, password)
-    emit('register_response', result)
+    emit("register_response", result)
 
-@socketio.on('login')
+@socketio.on("login")
 def handle_login(data):
-    username = data.get('username')
-    password = data.get('password')
+    username = data.get("username")
+    password = data.get("password")
     if authenticate(username, password):
         # 認証成功
         # ここでauto_login_tokenを生成してDBに保存し、クライアントに返す
@@ -127,27 +128,27 @@ def handle_login(data):
         # DBに保存
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        c.execute('UPDATE accounts SET auto_login_token=? WHERE username=?', (auto_login_token, username))
+        c.execute("UPDATE accounts SET auto_login_token=? WHERE username=?", (auto_login_token, username))
         conn.commit()
         conn.close()
 
         # クライアントには username ではなく auto_login_token を返す
-        emit('login_response', {
-            'status': 'success',
-            'username': username,  # UI表示用にユーザー名も返すことは可能
-            'auto_login_token': auto_login_token
+        emit("login_response", {
+            "status": "success",
+            "username": username,  # UI表示用にユーザー名も返すことは可能
+            "auto_login_token": auto_login_token
         })
     else:
-        emit('login_response', {'status': 'error', 'message': 'ログイン失敗'})
+        emit("login_response", {"status": "error", "message": "ログイン失敗"})
 
-@socketio.on('auto_login')
+@socketio.on("auto_login")
 def handle_auto_login(data):
-    token = data.get('token', '')
+    token = data.get("token", "")
 
     # 1) まず、DBから「auto_login_token == token」なユーザを探す
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT username, auto_login_token FROM accounts WHERE auto_login_token = ?', (token,))
+    c.execute("SELECT username, auto_login_token FROM accounts WHERE auto_login_token = ?", (token,))
     row = c.fetchone()
     conn.close()
 
@@ -159,22 +160,22 @@ def handle_auto_login(data):
         # 3) DBに保存されているトークンと合うか確認
         if new_hash == stored_token:
             # 一致 => 自動ログイン成功
-            emit('auto_login_response', {
-                'status': 'success',
-                'username': username,
-                'auto_login_token': stored_token
+            emit("auto_login_response", {
+                "status": "success",
+                "username": username,
+                "auto_login_token": stored_token
             })
         else:
             # 不一致 => バージョンが変わって旧トークンが合わなくなった or 改ざん
-            emit('auto_login_response', {
-                'status': 'error',
-                'message': '自動ログイン失敗（バージョン不一致）'
+            emit("auto_login_response", {
+                "status": "error",
+                "message": "自動ログイン失敗（バージョン不一致）"
             })
     else:
         # 該当なし => そもそもトークンが無効
-        emit('auto_login_response', {
-            'status': 'error',
-            'message': '自動ログイン失敗（トークン無効）'
+        emit("auto_login_response", {
+            "status": "error",
+            "message": "自動ログイン失敗（トークン無効）"
         })
 
 # -----------------------------------------------------------
@@ -183,20 +184,20 @@ def handle_auto_login(data):
 cancellation_flags = {}
 
 EXTENSION_TO_MIME = {
-    'pdf': 'application/pdf', 'js': 'application/x-javascript',
-    'py': 'text/x-python', 'css': 'text/css', 'md': 'text/md',
-    'csv': 'text/csv', 'xml': 'text/xml', 'rtf': 'text/rtf',
-    'txt': 'text/plain', 'png': 'image/png', 'jpeg': 'image/jpeg',
-    'jpg': 'image/jpeg', 'webp': 'image/webp', 'heic': 'image/heic',
-    'heif': 'image/heif', 'mp4': 'video/mp4', 'mpeg': 'video/mpeg',
-    'mov': 'video/mov', 'avi': 'video/avi', 'flv': 'video/x-flv',
-    'mpg': 'video/mpg', 'webm': 'video/webm', 'wmv': 'video/wmv',
-    '3gpp': 'video/3gpp', 'wav': 'audio/wav', 'mp3': 'audio/mp3',
-    'aiff': 'audio/aiff', 'aac': 'audio/aac', 'ogg': 'audio/ogg',
-    'flac': 'audio/flac',
+    "pdf": "application/pdf", "js": "application/x-javascript",
+    "py": "text/x-python", "css": "text/css", "md": "text/md",
+    "csv": "text/csv", "xml": "text/xml", "rtf": "text/rtf",
+    "txt": "text/plain", "png": "image/png", "jpeg": "image/jpeg",
+    "jpg": "image/jpeg", "webp": "image/webp", "heic": "image/heic",
+    "heif": "image/heif", "mp4": "video/mp4", "mpeg": "video/mpeg",
+    "mov": "video/mov", "avi": "video/avi", "flv": "video/x-flv",
+    "mpg": "video/mpg", "webm": "video/webm", "wmv": "video/wmv",
+    "3gpp": "video/3gpp", "wav": "audio/wav", "mp3": "audio/mp3",
+    "aiff": "audio/aiff", "aac": "audio/aac", "ogg": "audio/ogg",
+    "flac": "audio/flac",
 }
 
-USER_DIR = 'data/'  # ユーザーデータ保存ディレクトリ
+USER_DIR = "data/"  # ユーザーデータ保存ディレクトリ
 
 def get_user_dir(username):
     user_dir = os.path.join(USER_DIR, username)
@@ -210,7 +211,7 @@ def get_username_from_token(token):
     
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT username FROM accounts WHERE auto_login_token = ?', (token,))
+    c.execute("SELECT username FROM accounts WHERE auto_login_token = ?", (token,))
     row = c.fetchone()
     conn.close()
     
@@ -222,8 +223,8 @@ def get_username_from_token(token):
 # 4) チャット履歴管理 (従来どおりファイルに保存)
 # -----------------------------------------------------------
 def load_past_chats(user_dir):
-    past_chats_file = os.path.join(user_dir, 'past_chats_list')
-    lock_file = past_chats_file + '.lock'  # ロック用ファイル(.lock)
+    past_chats_file = os.path.join(user_dir, "past_chats_list")
+    lock_file = past_chats_file + ".lock"  # ロック用ファイル(.lock)
 
     # withブロックを抜けるまでロックが保持される
     with FileLock(lock_file):
@@ -234,14 +235,14 @@ def load_past_chats(user_dir):
     return past_chats
 
 def save_past_chats(user_dir, past_chats):
-    past_chats_file = os.path.join(user_dir, 'past_chats_list')
-    lock_file = past_chats_file + '.lock'
+    past_chats_file = os.path.join(user_dir, "past_chats_list")
+    lock_file = past_chats_file + ".lock"
 
     with FileLock(lock_file):
         joblib.dump(past_chats, past_chats_file)
 
 def load_chat_messages(user_dir, chat_id):
-    messages_file = os.path.join(user_dir, f'{chat_id}-st_messages')
+    messages_file = os.path.join(user_dir, f"{chat_id}-st_messages")
     try:
         messages = joblib.load(messages_file)
     except Exception:
@@ -249,11 +250,11 @@ def load_chat_messages(user_dir, chat_id):
     return messages
 
 def save_chat_messages(user_dir, chat_id, messages):
-    messages_file = os.path.join(user_dir, f'{chat_id}-st_messages')
+    messages_file = os.path.join(user_dir, f"{chat_id}-st_messages")
     joblib.dump(messages, messages_file)
 
 def load_gemini_history(user_dir, chat_id):
-    history_file = os.path.join(user_dir, f'{chat_id}-gemini_messages')
+    history_file = os.path.join(user_dir, f"{chat_id}-gemini_messages")
     try:
         history = joblib.load(history_file)
     except Exception:
@@ -261,13 +262,13 @@ def load_gemini_history(user_dir, chat_id):
     return history
 
 def save_gemini_history(user_dir, chat_id, history):
-    history_file = os.path.join(user_dir, f'{chat_id}-gemini_messages')
+    history_file = os.path.join(user_dir, f"{chat_id}-gemini_messages")
     joblib.dump(history, history_file)
 
 def delete_chat(user_dir, chat_id):
     try:
-        os.remove(os.path.join(user_dir, f'{chat_id}-st_messages'))
-        os.remove(os.path.join(user_dir, f'{chat_id}-gemini_messages'))
+        os.remove(os.path.join(user_dir, f"{chat_id}-st_messages"))
+        os.remove(os.path.join(user_dir, f"{chat_id}-gemini_messages"))
     except FileNotFoundError:
         pass
     past_chats = load_past_chats(user_dir)
@@ -278,12 +279,12 @@ def delete_chat(user_dir, chat_id):
 def find_gemini_index(messages, target_user_messages, include_model_responses=True):
     user_count = 0
     for idx, content in enumerate(messages):
-        if content.role == 'user':
+        if content.role == "user":
             user_count += 1
             if user_count == target_user_messages:
                 if include_model_responses:
                     # ユーザー発言に続くすべてのモデルの応答を含める
-                    while idx + 1 < len(messages) and messages[idx + 1].role == 'model':
+                    while idx + 1 < len(messages) and messages[idx + 1].role == "model":
                         idx += 1
                     return idx + 1
                 else:
@@ -294,29 +295,29 @@ def find_gemini_index(messages, target_user_messages, include_model_responses=Tr
 # -----------------------------------------------------------
 # 5) Flask ルートと SocketIO イベント
 # -----------------------------------------------------------
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@socketio.on('set_username')
+@socketio.on("set_username")
 def handle_set_username(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if username:
         print(f"Token authenticated as user: {username}")
-        emit('set_username_response', {'status': 'success', 'username': username})
+        emit("set_username_response", {"status": "success", "username": username})
     else:
         print("Invalid token received")
-        emit('set_username_response', {'status': 'error', 'message': '無効なトークンです'})
+        emit("set_username_response", {"status": "error", "message": "無効なトークンです"})
 
 # ------------------------
 # チャット関連イベント
 # ------------------------
-@socketio.on('count_token')
+@socketio.on("count_token")
 def handle_count_token(data):
-    model_name = data.get('model_name')
-    file_data_base64 = data.get('file_data')
-    file_mime_type = data.get('file_mime_type')
+    model_name = data.get("model_name")
+    file_data_base64 = data.get("file_data")
+    file_mime_type = data.get("file_mime_type")
 
     if file_mime_type in EXTENSION_TO_MIME.values():
         file_data = base64.b64decode(file_data_base64)
@@ -325,38 +326,103 @@ def handle_count_token(data):
         
         response = client.models.count_tokens(model=model_name, contents=content,)
         token = f"{response.total_tokens:,}"
-        emit('total_tokens', {'total_tokens': token})
+        emit("total_tokens", {"total_tokens": token})
 
-@socketio.on('get_model_list')
+@socketio.on("get_model_list")
 def handle_get_model_list():
     api_models = client.models.list()
     api_model_names = [m.name for m in api_models]
     combined_models = sorted(set(api_model_names + [m.strip() for m in MODELS if m.strip()]))
-    emit('model_list', {'models': combined_models})
+    emit("model_list", {"models": combined_models})
 
-@socketio.on('cancel_stream')
+@socketio.on("cancel_stream")
 def handle_cancel_stream(data):
     sid = request.sid
     cancellation_flags[sid] = True
 
-@socketio.on('send_message')
+@app.route("/upload_large_file", methods=["POST"])
+def upload_large_file():
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "ファイルがありません"}), 400
+    
+    token = request.form.get("token")
+    username = get_username_from_token(token)
+    if not username:
+        return jsonify({"status": "error", "message": "認証エラー"}), 401
+    
+    file = request.files["file"]
+    
+    # ユーザーディレクトリに一時ファイルとして保存
+    user_dir = get_user_dir(username)
+    timestamp = int(time.time())
+    safe_filename = f"tmp_{timestamp}_{secure_filename(file.filename)}"
+    tmp_path = os.path.join(user_dir, safe_filename)
+    
+    try:
+        # ファイルを一時的に保存
+        file.save(tmp_path)
+        
+        # デバッグ情報をログに出力
+        print(f"一時ファイル保存完了: {tmp_path}, サイズ: {os.path.getsize(tmp_path)}")
+        
+        try:
+            # Gemini File APIを使ってアップロード - より詳細なエラーハンドリング
+            uploaded_file = client.files.upload(
+                file=tmp_path,
+            )
+            print(f"Gemini File APIアップロード成功: file_id={uploaded_file.name}")
+            
+            # 一時ファイルを削除
+            os.remove(tmp_path)
+            
+            # ファイルIDと情報を返す
+            return jsonify({
+                "status": "success",
+                "file_id": uploaded_file.name,
+                "file_name": file.filename,
+                "file_mime_type": file.content_type
+            })
+        except Exception as api_error:
+            # API固有のエラーをより詳細にログ出力
+            print(f"Gemini File APIエラー: {str(api_error)}")
+            print(f"エラータイプ: {type(api_error).__name__}")
+            
+            # クライアントへのわかりやすいエラーメッセージ
+            return jsonify({
+                "status": "error", 
+                "message": f"ファイルAPIエラー: {str(api_error)}"
+            }), 500
+            
+    except Exception as e:
+        # 一般的なエラー
+        print(f"アップロード処理エラー: {str(e)}")
+        # エラー時も一時ファイルを削除
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@socketio.on("send_message")
 def handle_message(data):
     # キャンセルフラグをリセット
     sid = request.sid
     cancellation_flags[sid] = False
 
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
-    model_name = data.get('model_name')
-    message = data.get('message')
-    grounding_enabled = data.get('grounding_enabled', False)
-    file_data_base64 = data.get('file_data')
-    file_name = data.get('file_name')
-    file_mime_type = data.get('file_mime_type')
+    chat_id = data.get("chat_id")
+    model_name = data.get("model_name")
+    message = data.get("message")
+    grounding_enabled = data.get("grounding_enabled", False)
+    
+    # 既存のファイルデータ形式
+    file_data_base64 = data.get("file_data")
+    file_name = data.get("file_name")
+    file_mime_type = data.get("file_mime_type")
+    # 新しいファイルID形式
+    file_id = data.get("file_id")
 
     user_dir = get_user_dir(username)
     messages = load_chat_messages(user_dir, chat_id)
@@ -369,24 +435,31 @@ def handle_message(data):
         chat_title = message[:30]
         past_chats[chat_id] = {"title": chat_title, "bookmarked": False}
         save_past_chats(user_dir, past_chats)
-        emit('history_list', {'history': past_chats})
+        emit("history_list", {"history": past_chats})
 
     # ユーザーのプロンプトを履歴に追加
     messages.append({
-        'role': 'user',
-        'content': message + (f'\n\n[添付ファイル: {file_name}]' if file_name else '')
+        "role": "user",
+        "content": message + (f"\n\n[添付ファイル: {file_name}]" if file_name else "")
     })
     save_chat_messages(user_dir, chat_id, messages)
 
     try:
-        # 添付ファイルがある場合
-        if file_data_base64:
+        # コンテンツの作成方法を分岐
+        if file_id:
+            # File APIを使った大容量ファイル参照
+            file_ref = client.files.get(name=file_id)
+            contents = [file_ref, message]
+        elif file_data_base64:
+            # 既存の小さいファイル処理（base64データ）
             file_data = base64.b64decode(file_data_base64)
             file_part = types.Part.from_bytes(data=file_data, mime_type=file_mime_type)
             contents = [file_part, message]
         else:
+            # ファイルなしの場合
             contents = message
 
+        # 以下既存のコード（グラウンディング設定など）
         if grounding_enabled:
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
@@ -403,73 +476,73 @@ def handle_message(data):
         full_response = ""
         response_chunks = []
         usage_metadata = None
-        formatted_metadata = ''
+        formatted_metadata = ""
 
         for chunk in response:
             # クライアントがキャンセルをリクエストしたら中断
             if cancellation_flags.get(sid):
                 print("Streaming canceled by client")
                 break
-            if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
+            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                 usage_metadata = chunk.usage_metadata
 
             response_chunks.append(chunk)
             if chunk.text:
                 full_response += chunk.text
-                emit('gemini_response_chunk', {'chunk': chunk.text, 'chat_id': chat_id})
+                emit("gemini_response_chunk", {"chunk": chunk.text, "chat_id": chat_id})
 
         # トークン数情報を整形
         if not cancellation_flags.get(sid):
             if usage_metadata:
-                formatted_metadata = '\n\n---\n**' + model_name + '**    Token: ' + f"{usage_metadata.total_token_count:,}" + '\n\n'
+                formatted_metadata = "\n\n---\n**" + model_name + "**    Token: " + f"{usage_metadata.total_token_count:,}" + "\n\n"
                 full_response += formatted_metadata
-                emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
-                formatted_metadata = ''
+                emit("gemini_response_chunk", {"chunk": formatted_metadata, "chat_id": chat_id})
+                formatted_metadata = ""
 
         # グラウンディング処理
         if grounding_enabled and not cancellation_flags.get(sid):
-            all_grounding_links = ''
-            all_grounding_queries = ''
+            all_grounding_links = ""
+            all_grounding_queries = ""
             for chunk in response_chunks:
-                if hasattr(chunk, 'candidates') and chunk.candidates:
+                if hasattr(chunk, "candidates") and chunk.candidates:
                     candidate = chunk.candidates[0]
-                    if hasattr(candidate, 'grounding_metadata') and candidate.grounding_metadata:
+                    if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
                         metadata = candidate.grounding_metadata
-                        if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
+                        if hasattr(metadata, "grounding_chunks") and metadata.grounding_chunks:
                             for i, grounding_chunk in enumerate(metadata.grounding_chunks):
-                                if hasattr(grounding_chunk, 'web') and grounding_chunk.web:
-                                    all_grounding_links += f'[{i + 1}][{grounding_chunk.web.title}]({grounding_chunk.web.uri}) '
-                        if hasattr(metadata, 'web_search_queries') and metadata.web_search_queries:
+                                if hasattr(grounding_chunk, "web") and grounding_chunk.web:
+                                    all_grounding_links += f"[{i + 1}][{grounding_chunk.web.title}]({grounding_chunk.web.uri}) "
+                        if hasattr(metadata, "web_search_queries") and metadata.web_search_queries:
                             for query in metadata.web_search_queries:
-                                all_grounding_queries += f'{query} / '
+                                all_grounding_queries += f"{query} / "
 
             if all_grounding_queries:
-                all_grounding_queries = ' / '.join(
-                    sorted(set(all_grounding_queries.rstrip(' /').split(' / ')))
+                all_grounding_queries = " / ".join(
+                    sorted(set(all_grounding_queries.rstrip(" /").split(" / ")))
                 )
             if all_grounding_links:
-                formatted_metadata += all_grounding_links + '\n'
+                formatted_metadata += all_grounding_links + "\n"
             if all_grounding_queries:
-                formatted_metadata += '\nQuery: ' + all_grounding_queries + '\n'
+                formatted_metadata += "\nQuery: " + all_grounding_queries + "\n"
             full_response += formatted_metadata
-            emit('gemini_response_chunk', {'chunk': formatted_metadata, 'chat_id': chat_id})
+            emit("gemini_response_chunk", {"chunk": formatted_metadata, "chat_id": chat_id})
 
         # キャンセルされていない場合は最終的な応答を保存
         if cancellation_flags.get(sid):
             return
 
-        messages.append({'role': 'model', 'content': full_response})
+        messages.append({"role": "model", "content": full_response})
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, chat._curated_history)
-        emit('gemini_response_complete', {'chat_id': chat_id})
+        emit("gemini_response_complete", {"chat_id": chat_id})
 
     except Exception as e:
-        emit('gemini_response_error', {'error': str(e), 'chat_id': chat_id})
+        emit("gemini_response_error", {"error": str(e), "chat_id": chat_id})
     finally:
         # 応答処理終了後にキャンセルフラグを削除
         cancellation_flags.pop(sid, None)
 
-@socketio.on('disconnect')
+@socketio.on("disconnect")
 def handle_disconnect():
     """クライアント切断時のクリーンアップ"""
     sid = request.sid
@@ -477,15 +550,15 @@ def handle_disconnect():
     cancellation_flags.pop(sid, None)
     print(f"[disconnect] sid={sid} cleaned up.")
 
-@socketio.on('delete_message')
+@socketio.on("delete_message")
 def handle_delete_message(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
-    message_index = data.get('message_index')
+    chat_id = data.get("chat_id")
+    message_index = data.get("message_index")
 
     user_dir = get_user_dir(username)
     messages = load_chat_messages(user_dir, chat_id)
@@ -494,10 +567,10 @@ def handle_delete_message(data):
     if message_index == 0:
         delete_chat(user_dir, chat_id)
     else:
-        deleted_message_role = messages[message_index]['role']
+        deleted_message_role = messages[message_index]["role"]
         messages = messages[:message_index]
-        target_user_messages = sum(1 for msg in messages if msg['role'] == 'user')
-        if deleted_message_role == 'model':
+        target_user_messages = sum(1 for msg in messages if msg["role"] == "user")
+        if deleted_message_role == "model":
             gemini_index = find_gemini_index(gemini_history, target_user_messages, include_model_responses=False)
         else:
             gemini_index = find_gemini_index(gemini_history, target_user_messages, include_model_responses=True)
@@ -505,62 +578,62 @@ def handle_delete_message(data):
         save_chat_messages(user_dir, chat_id, messages)
         save_gemini_history(user_dir, chat_id, gemini_history)
 
-    emit('message_deleted', {'index': message_index})
+    emit("message_deleted", {"index": message_index})
 
-@socketio.on('get_history_list')
+@socketio.on("get_history_list")
 def handle_get_history_list(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
     user_dir = get_user_dir(username)
     past_chats = load_past_chats(user_dir)
-    emit('history_list', {'history': past_chats})
+    emit("history_list", {"history": past_chats})
 
-@socketio.on('load_chat')
+@socketio.on("load_chat")
 def handle_load_chat(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
+    chat_id = data.get("chat_id")
     user_dir = get_user_dir(username)
     messages = load_chat_messages(user_dir, chat_id)
-    emit('chat_loaded', {'messages': messages, 'chat_id': chat_id})
+    emit("chat_loaded", {"messages": messages, "chat_id": chat_id})
 
-@socketio.on('new_chat')
+@socketio.on("new_chat")
 def handle_new_chat(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    new_chat_id = f'{time.time()}'
-    emit('chat_created', {'chat_id': new_chat_id})
+    new_chat_id = f"{time.time()}"
+    emit("chat_created", {"chat_id": new_chat_id})
 
-@socketio.on('delete_chat')
+@socketio.on("delete_chat")
 def handle_delete_chat(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
+    chat_id = data.get("chat_id")
     user_dir = get_user_dir(username)
     delete_chat(user_dir, chat_id)
-    emit('chat_deleted', {'chat_id': chat_id})
+    emit("chat_deleted", {"chat_id": chat_id})
 
-@socketio.on('rename_chat')
+@socketio.on("rename_chat")
 def handle_rename_chat(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
-    new_title = data.get('new_title')
+    chat_id = data.get("chat_id")
+    new_title = data.get("new_title")
     
     user_dir = get_user_dir(username)
     past_chats = load_past_chats(user_dir)
@@ -568,18 +641,18 @@ def handle_rename_chat(data):
     if chat_id in past_chats:
         past_chats[chat_id]["title"] = new_title
         save_past_chats(user_dir, past_chats)
-        emit('chat_renamed', {'chat_id': chat_id, 'new_title': new_title})
-        emit('history_list', {'history': past_chats})
+        emit("chat_renamed", {"chat_id": chat_id, "new_title": new_title})
+        emit("history_list", {"history": past_chats})
 
 # ブックマーク切り替え用のSocketIOイベント
-@socketio.on('toggle_bookmark')
+@socketio.on("toggle_bookmark")
 def handle_toggle_bookmark(data):
-    token = data.get('token')
+    token = data.get("token")
     username = get_username_from_token(token)
     if not username:
-        emit('error', {'message': '認証エラー'})
+        emit("error", {"message": "認証エラー"})
         return
-    chat_id = data.get('chat_id')
+    chat_id = data.get("chat_id")
     
     user_dir = get_user_dir(username)
     past_chats = load_past_chats(user_dir)
@@ -587,15 +660,15 @@ def handle_toggle_bookmark(data):
     if chat_id in past_chats:
         past_chats[chat_id]["bookmarked"] = not past_chats[chat_id].get("bookmarked", False)
         save_past_chats(user_dir, past_chats)
-        emit('bookmark_toggled', {
-            'chat_id': chat_id, 
-            'bookmarked': past_chats[chat_id]["bookmarked"]
+        emit("bookmark_toggled", {
+            "chat_id": chat_id, 
+            "bookmarked": past_chats[chat_id]["bookmarked"]
         })
-        emit('history_list', {'history': past_chats})
+        emit("history_list", {"history": past_chats})
 # -----------------------------------------------------------
 # 6) メイン実行
 # -----------------------------------------------------------
-if __name__ == '__main__':
+if __name__ == "__main__":
     # SQLite初期化
     init_db()
 

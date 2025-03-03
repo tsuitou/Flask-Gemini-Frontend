@@ -6,10 +6,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark-reasonable.min.css">
   <link rel="stylesheet" href="https://www.unpkg.com/boxicons@2.1.4/css/boxicons.min.css">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for("static", filename="style.css") }}">
   <title>Gemini</title>
   <script>
-		const FILE_IMG_URL = "{{ url_for('static', filename='assets/file.svg') }}";
+		const FILE_IMG_URL = "{{ url_for("static", filename="assets/file.svg") }}";
   </script>
 </head>
 <body>
@@ -31,14 +31,14 @@
 												<div class="prompt__input-wrapper">
 														<textarea placeholder="Enter a prompt here" class="prompt__form-input" required id="promptInput" autocomplete="off" onkeydown="handleKeyDown(event)"></textarea>
 														<button class="prompt__form-button" id="sendButton">
-																<i class='bx bx-send'></i>
+																<i class="bx bx-send"></i>
 														</button>
 														<button class="prompt__form-button" id="stopButton" style="display: none;">
-															<i class='bx bx-stop'></i>
+															<i class="bx bx-stop"></i>
 														</button>
 														<input type="file" id="fileInput" class="prompt__form-file" style="display: none;">
 														<button class="prompt__form-button" id="attachButton" type="button">
-																<i class='bx bx-paperclip'></i>
+																<i class="bx bx-paperclip"></i>
 														</button>
 												</div>
 										</form>
@@ -71,7 +71,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 		<script src="https://unpkg.com/markdown-it-texmath@1.0.0/texmath.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
-    <script src="{{ url_for('static', filename='languages.js') }}"></script>
+    <script src="{{ url_for("static", filename="languages.js") }}"></script>
 		<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 		<script>
 		/************************************************
@@ -80,7 +80,7 @@
 		hljs.registerLanguage("csv", function(hljs) {
 			// ダブルクォートで囲まれたフィールドを表現 ("" はエスケープ用)
 			const QUOTED_FIELD = {
-				className: 'string',
+				className: "string",
 				begin: /"/,
 				end: /"/,
 				contains: [
@@ -90,7 +90,7 @@
 
 			// ダブルクォートされていないフィールド (カンマ/改行まで)
 			const UNQUOTED_FIELD = {
-				className: 'string',
+				className: "string",
 				begin: /[^",\n]+/
 			};
 
@@ -106,7 +106,7 @@
 							QUOTED_FIELD,
 							UNQUOTED_FIELD,
 							{
-								className: 'symbol', // カンマをハイライトしたい場合
+								className: "symbol", // カンマをハイライトしたい場合
 								begin: /,/
 							}
 						]
@@ -122,31 +122,31 @@
 			// 代表的なVBAのキーワード
 			const VBA_KEYWORDS = [
 				// 制御構文・宣言など
-				'If', 'Then', 'Else', 'ElseIf', 'End', 'Select', 'Case',
-				'For', 'Each', 'In', 'To', 'Next', 'Step', 'While', 'Wend',
-				'Do', 'Loop', 'Until', 'Exit', 'Sub', 'Function', 'Property',
-				'With', 'Return', 'Goto', 'GoSub', 'Call',
+				"If", "Then", "Else", "ElseIf", "End", "Select", "Case",
+				"For", "Each", "In", "To", "Next", "Step", "While", "Wend",
+				"Do", "Loop", "Until", "Exit", "Sub", "Function", "Property",
+				"With", "Return", "Goto", "GoSub", "Call",
 
 				// 変数宣言関連
-				'Dim', 'As', 'ReDim', 'Set', 'Public', 'Private', 'Option', 'Explicit',
-				'Const', 'Static',
+				"Dim", "As", "ReDim", "Set", "Public", "Private", "Option", "Explicit",
+				"Const", "Static",
 
 				// エラー処理
-				'On', 'Error', 'Resume',
+				"On", "Error", "Resume",
 
 				// VBA組み込み関数・ステートメントの例 (一部)
-				'MsgBox', 'InputBox', 'Debug', 'Print'
-			].join(' ');
+				"MsgBox", "InputBox", "Debug", "Print"
+			].join(" ");
 
 			return {
-				name: 'VBA',
+				name: "VBA",
 				case_insensitive: true, // VBAは基本的に大文字小文字を区別しない
 				keywords: {
 					keyword: VBA_KEYWORDS
 				},
 				contains: [
 					// シングルクォートによるコメント
-					hljs.COMMENT(/'/, /$/),
+					hljs.COMMENT(/"/, /$/),
 					// Rem で始まるコメント (古いVB風)
 					hljs.COMMENT(/\bRem\b/, /$/),
 
@@ -159,7 +159,7 @@
 			};
 		});
 		</script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for("static", filename="script.js") }}"></script>
 </body>
 
 </html>
