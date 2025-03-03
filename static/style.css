@@ -23,7 +23,7 @@
   --text-secondary-color: #4D4D4D;
   --heading-secondary-color: #C4C7C5;
   --placeholder-color: #717075;
-	--font-styrene-b: "__styreneB_5d855b","__styreneB_Fallback_5d855b";
+	--width: 80%;
 }
 
 /************************************
@@ -412,7 +412,7 @@ code {
 /* チャット表示部分 */
 .chats {
   align-items: flex-start;
-	width: 90%;
+	width: var(--width);
 	min-width: 300px;
 }
 
@@ -446,11 +446,13 @@ code {
   color: var(--text-color);
   white-space: normal;
   margin-top: 10px;
+	width: 100%;
 }
 
 .chats .message--outgoing .message__text {
   padding: 1em 1em;
   border-radius: 20px;
+	width: auto;
   background: var(--secondary-color);
   white-space: pre-wrap;
   word-break: break-all;
@@ -764,7 +766,7 @@ input:checked + .slider:before {
 
 .prompt__form{
   margin: 0 auto;
-  width: 90%;
+  width: var(--width);
 	min-width: 300px;
 }
 
@@ -931,7 +933,7 @@ body.hide-header .header {
   position: relative;
   text-align: center;
   border-bottom: 1px solid var(--secondary-hover-color);
-  width: 90%;
+  width: var(--width);
   min-width: 300px;
 }
 
