@@ -43,6 +43,7 @@ let resendMessage = "";
 let currentChatTitle = null;
 let fileId = null;
 
+
 const FILE_SIZE_THRESHOLD = 10 * 1024 * 1024;
 
 const md = window.markdownit({
@@ -214,15 +215,13 @@ function initializeApp() {
   token = localStorage.getItem("autoLoginToken");
   socket.emit("set_username", { token: token });
 
-  // タイトル表示初期化
   initializeChatTitle();
-
-  // 他の初期化処理
   fetchModelList();
   fetchHistoryList();
   startNewChat();
+	setupEditor();
+	promptForm.addEventListener("submit", handleSendMessage);
 
-  // 削除イベント処理
   socket.off("chat_deleted");
   socket.on("chat_deleted", (data) => {
     if (chat_id === data.chat_id) {
@@ -756,26 +755,6 @@ function toggleResponseButtons(isResponding) {
   }
 }
 
-function handleKeyDown(event) {
-  if (event.key === "Tab") {
-    event.preventDefault(); // デフォルトのTabキーの動作をキャンセル
-
-    const start = promptInput.selectionStart;
-    const end = promptInput.selectionEnd;
-
-    // Tab文字を挿入
-    promptInput.value =
-      promptInput.value.substring(0, start) +
-      "\t" +
-      promptInput.value.substring(end);
-
-    // カーソル位置を更新
-    promptInput.selectionStart = promptInput.selectionEnd = start + 1;
-  }
-}
-
-promptForm.addEventListener("submit", handleSendMessage);
-
 function handleSendMessage(e) {
   e.preventDefault();
   if (isGeneratingResponse) return;
@@ -786,6 +765,7 @@ function handleSendMessage(e) {
 
   promptInput.value = "";
   promptInput.style.height = "auto";
+	chatsWrapper.style.paddingBottom = "100px";
 }
 
 function sendMessage(message) {
@@ -981,12 +961,6 @@ function removeLoadingIndicator() {
 // UIヘルパー関数
 // ----------------------------------------
 
-promptInput.addEventListener("input", function () {
-  // 一度高さをリセットして再計算
-  this.style.height = "auto";
-  this.style.height = this.scrollHeight + "px";
-});
-
 stopButton.addEventListener("click", () => {
   // 現在応答中ならキャンセルイベントを送信
   if (isGeneratingResponse) {
@@ -1092,6 +1066,134 @@ const throttle = (callback, limit) => {
     }
   };
 };
+
+function setupEditor() {
+  const textarea = promptInput;
+  
+  // Tabキーの処理
+  textarea.addEventListener('keydown', function(e) {
+    // Tabキー
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const start = this.selectionStart;
+      const end = this.selectionEnd;
+      const value = this.value;
+      
+      // 選択範囲があるかどうか確認
+      if (start !== end) {
+        // 複数行の選択処理
+        const selectedText = value.substring(start, end);
+        const lines = selectedText.split('\n');
+        
+        // Shiftキーが押されているかどうかチェック
+        if (e.shiftKey) {
+          // インデント削除
+          const processedLines = lines.map(line => {
+            if (line.startsWith('\t')) {
+              return line.substring(1);
+            } else if (line.startsWith('  ')) {
+              return line.substring(2);
+            }
+            return line;
+          });
+          
+          const newText = processedLines.join('\n');
+          const indentDiff = selectedText.length - newText.length;
+          
+          this.value = value.substring(0, start) + newText + value.substring(end);
+          this.selectionStart = start;
+          this.selectionEnd = end - indentDiff;
+        } else {
+          // インデント追加
+          const processedLines = lines.map(line => '\t' + line);
+          const newText = processedLines.join('\n');
+          
+          this.value = value.substring(0, start) + newText + value.substring(end);
+          this.selectionStart = start;
+          this.selectionEnd = start + newText.length;
+        }
+      } else {
+        // 単一カーソル位置での処理
+        if (e.shiftKey) {
+          // カーソル位置ではShift+Tabは何もしない
+        } else {
+          // カーソル位置にタブを挿入
+          this.value = value.substring(0, start) + '\t' + value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        }
+      }
+    }
+  });
+  
+  // Ctrl+Z (アンドゥ) と Ctrl+Y (リドゥ) の履歴管理
+  const history = [];
+  let historyIndex = -1;
+  let ignoreChange = false;
+  
+  // 初期値を履歴に追加
+  saveToHistory(textarea.value);
+  
+  // 履歴に保存する関数
+  function saveToHistory(value) {
+    // 変更を無視する場合はスキップ
+    if (ignoreChange) return;
+    
+    // 現在のインデックス以降の履歴を削除（リドゥ履歴のクリア）
+    if (historyIndex < history.length - 1) {
+      history.splice(historyIndex + 1);
+    }
+    
+    // 新しい履歴を追加
+    history.push(value);
+    historyIndex = history.length - 1;
+    
+    // 履歴が多すぎる場合は古いものを削除
+    if (history.length > 100) {
+      history.shift();
+      historyIndex--;
+    }
+  }
+  
+  // テキスト変更時に履歴に追加
+  textarea.addEventListener('input', function() {
+		this.style.height = "auto";
+		this.style.height = this.scrollHeight + "px";
+		chatsWrapper.style.paddingBottom = 100 + this.offsetHeight + "px";
+    saveToHistory(this.value);
+  });
+  
+  // キーボードショートカット（Ctrl+Z, Ctrl+Y）
+  textarea.addEventListener('keydown', function(e) {
+    // Ctrl+Z (アンドゥ)
+    if (e.ctrlKey && e.key === 'z') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        ignoreChange = true;
+        this.value = history[historyIndex];
+        ignoreChange = false;
+        
+        // カーソル位置を末尾に設定
+        this.selectionStart = this.selectionEnd = this.value.length;
+      }
+    }
+    
+    // Ctrl+Y (リドゥ)
+    if (e.ctrlKey && e.key === 'y') {
+      e.preventDefault();
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        ignoreChange = true;
+        this.value = history[historyIndex];
+        ignoreChange = false;
+        
+        // カーソル位置を末尾に設定
+        this.selectionStart = this.selectionEnd = this.value.length;
+      }
+    }
+  });
+}
 
 // ----------------------------------------
 // グラウンディング

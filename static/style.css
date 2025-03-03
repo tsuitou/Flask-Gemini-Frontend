@@ -419,7 +419,7 @@ code {
 .chats-wrapper {
   padding: 1em 1em;
   padding-bottom: 100px;
-  max-height: calc(100vh - 6em); /* サイドバーと prompt を考慮した高さ */
+  max-height: calc(100vh - 10em); /* サイドバーと prompt を考慮した高さ */
   overflow-y: auto;
   scrollbar-color: #999 transparent;
   width: 100%;
