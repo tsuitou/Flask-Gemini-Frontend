@@ -500,9 +500,9 @@ def handle_message(data):
                     if part.text:
                         chunk_text += part.text
                     if hasattr(part, 'executable_code') and part.executable_code:
-                        chunk_text += f"\nExecutable Code:\n```Python\n{part.executable_code.code}\n```\n"
+                        chunk_text += f"\n**Executable Code**\n```Python\n{part.executable_code.code}\n```\n"
                     if hasattr(part, 'code_execution_result') and part.code_execution_result:
-                        chunk_text += f"\nCode Execution Result:\n```Python\n{part.code_execution_result}\n```\n"
+                        chunk_text += f"\n**Code Execution Result**\n```Python\n{part.code_execution_result}\n```\n"
                     if hasattr(chunk, 'thought') and chunk.thought:
                          chunk_text += f"\nThought:\n{chunk.thought}\n"
 
