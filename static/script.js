@@ -55,6 +55,9 @@ const tm = window.texmath.use(katex);
 md.use(tm, {
   engine: katex,
   delimiters: "dollars", // $...$ と $$...$$ 記法を使用
+  katexOptions: {
+    strict: false // または 'ignore'
+  },
   macros: {
     /* カスタムマクロがあれば設定 */
   },
