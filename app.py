@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, emit
 from google import genai
 from google.genai import types 
-from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
+from google.genai.types import Tool, GenerateContentConfig, GoogleSearch, ToolCodeExecution
 from dotenv import load_dotenv
 from pathlib import Path
 from filelock import FileLock
@@ -34,9 +34,14 @@ if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
+code_execution_tool = Tool(
+    code_execution=ToolCodeExecution()
+)
+
 google_search_tool = Tool(
     google_search=GoogleSearch()
 )
+
 MODELS = os.environ.get("MODELS", "").split(",")
 SYSTEM_INSTRUCTION = os.environ.get("SYSTEM_INSTRUCTION")
 VERSION = os.environ.get("VERSION")
@@ -464,32 +469,59 @@ def handle_message(data):
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[google_search_tool],
-                response_modalities=["TEXT"]
             )
         else:
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
+                tools=[code_execution_tool],
             )
 
         # ストリーミング応答開始
         response = chat.send_message_stream(message=contents, config=configs)
         full_response = ""
-        response_chunks = []
         usage_metadata = None
         formatted_metadata = ""
+        all_grounding_links = ""
+        all_grounding_queries = ""
 
         for chunk in response:
             # クライアントがキャンセルをリクエストしたら中断
             if cancellation_flags.get(sid):
                 print("Streaming canceled by client")
                 break
+
             if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                 usage_metadata = chunk.usage_metadata
 
-            response_chunks.append(chunk)
-            if chunk.text:
-                full_response += chunk.text
-                emit("gemini_response_chunk", {"chunk": chunk.text, "chat_id": chat_id})
+            chunk_text = ""  # このチャンクのテキストを蓄積する変数
+
+            if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                for part in chunk.candidates[0].content.parts:
+                    if part.text:
+                        chunk_text += part.text
+                    if hasattr(part, 'executable_code') and part.executable_code:
+                        chunk_text += f"\nExecutable Code:\n```Python\n{part.executable_code.code}\n```\n"
+                    if hasattr(part, 'code_execution_result') and part.code_execution_result:
+                        chunk_text += f"\nCode Execution Result:\n```Python\n{part.code_execution_result}\n```\n"
+                    if hasattr(chunk, 'thought') and chunk.thought:
+                         chunk_text += f"\nThought:\n{chunk.thought}\n"
+
+            # グラウンディング処理をここで行う
+            if hasattr(chunk, "candidates") and chunk.candidates:
+                candidate = chunk.candidates[0]
+                if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
+                    metadata = candidate.grounding_metadata
+                    if hasattr(metadata, "grounding_chunks") and metadata.grounding_chunks:
+                        for i, grounding_chunk in enumerate(metadata.grounding_chunks):
+                            if hasattr(grounding_chunk, "web") and grounding_chunk.web:
+                                all_grounding_links += f"[{i + 1}][{grounding_chunk.web.title}]({grounding_chunk.web.uri}) "
+                    if hasattr(metadata, "web_search_queries") and metadata.web_search_queries:
+                        for query in metadata.web_search_queries:
+                            all_grounding_queries += f"{query} / "
+
+            if chunk_text:
+                full_response += chunk_text
+                emit("gemini_response_chunk", {"chunk": chunk_text, "chat_id": chat_id})
 
         # トークン数情報を整形
         if not cancellation_flags.get(sid):
@@ -499,33 +531,18 @@ def handle_message(data):
                 emit("gemini_response_chunk", {"chunk": formatted_metadata, "chat_id": chat_id})
                 formatted_metadata = ""
 
-        # グラウンディング処理
-        if grounding_enabled and not cancellation_flags.get(sid):
-            all_grounding_links = ""
-            all_grounding_queries = ""
-            for chunk in response_chunks:
-                if hasattr(chunk, "candidates") and chunk.candidates:
-                    candidate = chunk.candidates[0]
-                    if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
-                        metadata = candidate.grounding_metadata
-                        if hasattr(metadata, "grounding_chunks") and metadata.grounding_chunks:
-                            for i, grounding_chunk in enumerate(metadata.grounding_chunks):
-                                if hasattr(grounding_chunk, "web") and grounding_chunk.web:
-                                    all_grounding_links += f"[{i + 1}][{grounding_chunk.web.title}]({grounding_chunk.web.uri}) "
-                        if hasattr(metadata, "web_search_queries") and metadata.web_search_queries:
-                            for query in metadata.web_search_queries:
-                                all_grounding_queries += f"{query} / "
+        # グラウンディング情報を整形して送信
+        if all_grounding_queries:
+            all_grounding_queries = " / ".join(
+                sorted(set(all_grounding_queries.rstrip(" /").split(" / ")))
+            )
+        if all_grounding_links:
+            formatted_metadata += all_grounding_links + "\n"
+        if all_grounding_queries:
+            formatted_metadata += "\nQuery: " + all_grounding_queries + "\n"
 
-            if all_grounding_queries:
-                all_grounding_queries = " / ".join(
-                    sorted(set(all_grounding_queries.rstrip(" /").split(" / ")))
-                )
-            if all_grounding_links:
-                formatted_metadata += all_grounding_links + "\n"
-            if all_grounding_queries:
-                formatted_metadata += "\nQuery: " + all_grounding_queries + "\n"
-            full_response += formatted_metadata
-            emit("gemini_response_chunk", {"chunk": formatted_metadata, "chat_id": chat_id})
+        full_response += formatted_metadata
+        emit("gemini_response_chunk", {"chunk": formatted_metadata, "chat_id": chat_id})
 
         # キャンセルされていない場合は最終的な応答を保存
         if cancellation_flags.get(sid):
