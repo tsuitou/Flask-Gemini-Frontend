@@ -464,7 +464,7 @@ def handle_message(data):
             contents = [file_part, message]
         else:
             # ファイルなしの場合
-            isFile = Fales
+            isFile = False
             contents = message
 
         # 以下既存のコード（グラウンディング設定など）
