@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark-reasonable.min.css">
-  <link rel="stylesheet" href="https://www.unpkg.com/boxicons@2.1.4/css/boxicons.min.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <link rel="stylesheet" href="{{ url_for("static", filename="lib/atom-one-dark-reasonable.min.css") }}">
+  <link rel="stylesheet" href="{{ url_for("static", filename="lib/boxicons.min.css") }}">
+	<link rel="stylesheet" href="{{ url_for("static", filename="lib/katex.min.css") }}">
   <link rel="stylesheet" href="{{ url_for("static", filename="style.css") }}">
   <title>Gemini</title>
   <script>
@@ -66,13 +66,13 @@
 					</div>
 				</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.2/markdown-it.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
-		<script src="https://unpkg.com/markdown-it-texmath@1.0.0/texmath.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
-    <script src="{{ url_for("static", filename="languages.js") }}"></script>
-		<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="{{ url_for("static", filename="lib/socket.io.js") }}"></script>
+    <script src="{{ url_for("static", filename="lib/markdown-it.min.js") }}"></script>
+		<script src="{{ url_for("static", filename="lib/katex.min.js") }}"></script>
+		<script src="{{ url_for("static", filename="lib/texmath.js") }}"></script>
+    <script src="{{ url_for("static", filename="lib/highlight.min.js") }}"></script>
+    <script src="{{ url_for("static", filename="lib/languages.js") }}"></script>
+		<script src="{{ url_for("static", filename="lib/xlsx.full.min.js") }}"></script>
 		<script>
 		/************************************************
 		 * CSV 用のカスタム言語定義
