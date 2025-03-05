@@ -199,6 +199,7 @@ pre {
   white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: break-word;
+	font-family: "メイリオ", Meiryo, sans-serif;
 }
 
 code {
@@ -208,6 +209,7 @@ code {
 	padding-left: 5px;
 	padding-right: 5px;
   border-radius: 2px;
+	font-family: "メイリオ", Meiryo, sans-serif;
 }
 
 .code__language-label {
@@ -218,6 +220,7 @@ code {
   color: var(--placeholder-color);
   font-size: 14px;
   text-transform: capitalize;
+	font-family: "メイリオ", Meiryo, sans-serif;
 }
 
 .hljs {
@@ -653,14 +656,14 @@ code {
 }
 
 /* グラウンディングスイッチ */
-.grounding-switch {
+.tool-switch {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5em;
 }
 
-.grounding-switch label {
+.tool-switch label {
   color: var(--text-secondary-color);
 }
 

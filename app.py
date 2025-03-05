@@ -421,6 +421,7 @@ def handle_message(data):
     model_name = data.get("model_name")
     message = data.get("message")
     grounding_enabled = data.get("grounding_enabled", False)
+    code_execution_enabled = data.get("code_execution_enabled", False)
     
     # 既存のファイルデータ形式
     file_data_base64 = data.get("file_data")
@@ -449,7 +450,6 @@ def handle_message(data):
     })
     save_chat_messages(user_dir, chat_id, messages)
     
-    isFile = True
     
     try:
         # コンテンツの作成方法を分岐
@@ -464,7 +464,6 @@ def handle_message(data):
             contents = [file_part, message]
         else:
             # ファイルなしの場合
-            isFile = False
             contents = message
 
         # 以下既存のコード（グラウンディング設定など）
@@ -473,14 +472,14 @@ def handle_message(data):
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[google_search_tool],
             )
-        elif isFile:
+        elif code_execution_enabled:
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
+                tools=[code_execution_tool],
             )
         else:
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
-                tools=[code_execution_tool],
             )
 
         # ストリーミング応答開始

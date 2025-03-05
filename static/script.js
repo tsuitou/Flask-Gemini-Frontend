@@ -25,6 +25,7 @@ const fileInput = document.getElementById("fileInput");
 const attachButton = document.getElementById("attachButton");
 const modelSelect = document.getElementById("modelSelect");
 const groundingSwitch = document.getElementById("groundingSwitch");
+const codeExecutionSwitch = document.getElementById("codeExecutionSwitch");
 const attachmentPreview = document.getElementById("attachmentPreview");
 const dragOverlay = document.getElementById("dragOverlay");
 
@@ -34,6 +35,7 @@ let token = null;
 let chat_id = null;
 let currentModel = null;
 let groundingEnabled = false;
+let codeExecutionEnabled = false;
 let isGeneratingResponse = false;
 let fileData = null;
 let fileName = null;
@@ -791,6 +793,7 @@ function sendMessage(message) {
     model_name: currentModel,
     message: message,
     grounding_enabled: groundingEnabled,
+		code_execution_enabled: codeExecutionEnabled,
   };
 
   // ファイル情報の追加 - 大容量と小容量を区別
@@ -1204,6 +1207,11 @@ function setupEditor() {
 groundingSwitch.addEventListener("change", () => {
   groundingEnabled = groundingSwitch.checked;
 });
+
+codeExecutionSwitch.addEventListener("change", () => {
+  codeExecutionEnabled = codeExecutionSwitch.checked;
+});
+
 
 // ----------------------------------------
 // ファイル添付
