@@ -1258,7 +1258,7 @@ socket.on("total_tokens", (total_tokens) => {
 
 function handleFile(file) {
   if (
-    !/\.(pdf|js|py|css|md|csv|xml|rtf|txt|png|jpeg|jpg|webp|heic|heif|mp4|mpeg|mov|avi|flv|mpg|webm|wmv|3gpp|wav|mp3|aiff|aac|ogg|flac)$/i.test(
+    !/\.(pdf|js|py|css|md|csv|xml|rtf|txt|png|jpeg|jpg|webp|heic|heif|mp4|mpeg|mov|avi|flv|mpg|webm|wmv|3gpp|wav|mp3|aiff|aac|ogg|flac|xlsx|xlsm)$/i.test(
       file.name
     )
   ) {
@@ -1270,7 +1270,7 @@ function handleFile(file) {
     attachmentPreview.innerHTML = ""; // 添付プレビューもクリア
     return;
   }
-  // 20MB 超えるかどうかのチェック
+  // 10MB 超えるかどうかのチェック
   if (file.size > FILE_SIZE_THRESHOLD) {
     if (
       /\.(mp4|mpeg|mov|avi|flv|mpg|webm|wmv|3gpp|wav|mp3|aiff|aac|ogg|flac)$/i.test(
@@ -1279,7 +1279,7 @@ function handleFile(file) {
     ) {
       uploadLargeFile(file);
     } else {
-      alert("動画・音声ファイル以外");
+      alert("動画・音声以外のファイルサイズ上限は10MBです");
       fileData = null;
       fileName = null;
       fileMimeType = null;

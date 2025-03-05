@@ -25,7 +25,7 @@ from filelock import FileLock
 # 1) Flask + SocketIO の初期化
 # -----------------------------------------------------------
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode="gevent", cors_allowed_origins="*", max_http_buffer_size=20 * 1024 * 1024,)
 
 # 環境変数の読み込み
 load_dotenv()
@@ -448,7 +448,9 @@ def handle_message(data):
         "content": message + (f"\n\n[添付ファイル: {file_name}]" if file_name else "")
     })
     save_chat_messages(user_dir, chat_id, messages)
-
+    
+    isFile = True
+    
     try:
         # コンテンツの作成方法を分岐
         if file_id:
@@ -462,6 +464,7 @@ def handle_message(data):
             contents = [file_part, message]
         else:
             # ファイルなしの場合
+            isFile = Fales
             contents = message
 
         # 以下既存のコード（グラウンディング設定など）
@@ -469,6 +472,10 @@ def handle_message(data):
             configs = GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[google_search_tool],
+            )
+        elif isFile:
+            configs = GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
             )
         else:
             configs = GenerateContentConfig(
