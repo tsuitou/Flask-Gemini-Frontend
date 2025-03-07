@@ -405,6 +405,7 @@ code {
 
 /* メインコンテンツ */
 .main-content {
+	width: var(--width);
   flex-grow: 1; /* 残りのスペースを占める */
   order: 2;
   display: flex;
@@ -414,14 +415,12 @@ code {
 
 /* チャット表示部分 */
 .chats {
-  align-items: flex-start;
 	width: var(--width);
 	min-width: 300px;
-	font-family: unset;
 }
 
 .chats-wrapper {
-  padding: 2em;
+	padding: 2em;
   padding-bottom: 100px;
   max-height: calc(100vh - 8em); /* サイドバーと prompt を考慮した高さ */
   overflow-y: auto;
@@ -443,7 +442,6 @@ code {
 
 .chats .message__content {
   display: flex;
-  gap: 1.5em;
 }
 
 .chats .message__text {
@@ -451,6 +449,7 @@ code {
   white-space: normal;
   margin-top: 10px;
 	width: 100%;
+	font-family: unset;
 }
 
 .chats .message--outgoing .message__text {
@@ -473,14 +472,6 @@ code {
 
 .chats .message--loading .message__text {
   display: none;
-}
-
-.chats .message__avatar {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 50%;
-  object-fit: top center;
 }
 
 /* ローディングインジケータ */
