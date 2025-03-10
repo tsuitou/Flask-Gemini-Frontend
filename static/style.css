@@ -743,6 +743,7 @@ input:checked + .slider:before {
   background: transparent;
   z-index: 500;
   padding: 1em;
+	font-family: "メイリオ", Meiryo, sans-serif;
 }
 
 .prompt__input-wrapper {
