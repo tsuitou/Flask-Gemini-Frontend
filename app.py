@@ -230,7 +230,6 @@ def get_username_from_token(token):
 def load_past_chats(user_dir):
     past_chats_file = os.path.join(user_dir, "past_chats_list")
     lock_file = past_chats_file + ".lock"  # ロック用ファイル(.lock)
-
     # withブロックを抜けるまでロックが保持される
     with FileLock(lock_file):
         try:
@@ -242,33 +241,40 @@ def load_past_chats(user_dir):
 def save_past_chats(user_dir, past_chats):
     past_chats_file = os.path.join(user_dir, "past_chats_list")
     lock_file = past_chats_file + ".lock"
-
     with FileLock(lock_file):
         joblib.dump(past_chats, past_chats_file)
 
 def load_chat_messages(user_dir, chat_id):
     messages_file = os.path.join(user_dir, f"{chat_id}-st_messages")
-    try:
-        messages = joblib.load(messages_file)
-    except Exception:
-        messages = []
+    lock_file = messages_file + ".lock"
+    with FileLock(lock_file):
+        try:
+            messages = joblib.load(messages_file)
+        except Exception:
+            messages = []
     return messages
 
 def save_chat_messages(user_dir, chat_id, messages):
     messages_file = os.path.join(user_dir, f"{chat_id}-st_messages")
-    joblib.dump(messages, messages_file)
+    lock_file = messages_file + ".lock"
+    with FileLock(lock_file):
+        joblib.dump(messages, messages_file)
 
 def load_gemini_history(user_dir, chat_id):
     history_file = os.path.join(user_dir, f"{chat_id}-gemini_messages")
-    try:
-        history = joblib.load(history_file)
-    except Exception:
-        history = []
+    lock_file = history_file + ".lock"
+    with FileLock(lock_file):
+        try:
+            history = joblib.load(history_file)
+        except Exception:
+            history = []
     return history
 
 def save_gemini_history(user_dir, chat_id, history):
     history_file = os.path.join(user_dir, f"{chat_id}-gemini_messages")
-    joblib.dump(history, history_file)
+    lock_file = history_file + ".lock"
+    with FileLock(lock_file):
+        joblib.dump(history, history_file)
 
 def delete_chat(user_dir, chat_id):
     try:
